@@ -14,7 +14,9 @@ function locate(){
     ME={lat:p.coords.latitude,lon:p.coords.longitude,acc:p.coords.accuracy};
     const far=hav(ME,ATHENS);
     toast(far>50?`Standort gefunden, ${Math.round(far)} km von Athen`:`Standort gefunden (±${Math.round(ME.acc)} m)`);
-    if(far<=50)S.sort="near";save();renderAll();},
+    if(far<=50)S.sort="near";
+    if(typeof WANT_HOME!=="undefined"&&WANT_HOME){WANT_HOME=false;S.home={lat:ME.lat,lon:ME.lon};S.dt.from="home";toast("Standort als Unterkunft gespeichert");}
+    save();renderAll();},
    err=>{b.classList.remove("busy");toast(err.code===1?"Standort abgelehnt. In den Browser-Einstellungen erlauben.":"Standort konnte nicht ermittelt werden");},
    {enableHighAccuracy:true,timeout:12000,maximumAge:60000});}
 function fmtMin(m){m=Math.max(1,Math.round(m));return m<60?`${m} Min.`:`${Math.floor(m/60)} h ${String(m%60).padStart(2,"0")}`;}
@@ -122,6 +124,7 @@ function itemCard(it){const cat=catOf(it);const dim=isDim(it);
    <div class="badges">${priceBadge(it.p)}${inBadge(it)}${it.eu25?'<span class="b free">EU unter 25: frei</span>':""}${dietBadges(it)}${seasonOff?'<span class="b warn">im Zeitraum geschlossen</span>':""}${closedDays?`<span class="b warn">${closedDays} geschlossen</span>`:""}</div>
    ${distRow(it)}
    <p>${esc(it.d)}</p>
+   ${hoursCrowd(it)}
    ${it.p&&it.p.n?`<div class="tip">${esc(it.p.n)}</div>`:""}
    ${it.tip?`<div class="tip"><b>Tipp:</b> ${esc(it.tip)}</div>`:""}
    ${freeHit?`<div class="tip"><b>Gratis in deinem Zeitraum:</b> ${freeHit}</div>`:""}
@@ -227,27 +230,24 @@ function gmapsRoute(order,mode){if(order.length<2)return null;const tm={walk:"wa
 function legLink(a,b,mode){const tm={walk:"walking",car:"driving",transit:"transit"}[mode];return `https://www.google.com/maps/dir/?api=1&origin=${a.lat},${a.lon}&destination=${b.lat},${b.lon}&travelmode=${tm}`;}
 const kmf=v=>v.toFixed(1).replace(".",",");
 
-/* ===================== PLAN ===================== */
-function renderPlan(){const el=$("#p-plan");const ds=days();const ids=Object.keys(S.plan).filter(byId);
-  const pc=$("#planCount");pc.textContent=ids.length;pc.dataset.n=ids.length;
-  if(!ids.length){el.innerHTML=`<div class="ptitle"><h2>Mein Plan</h2></div><div class="empty">${ic("route")}<span>Dein Plan ist leer. Füge unter <b>Entdecken</b> oder <b>Events</b> Ziele hinzu, dann berechne ich hier eine sinnvolle Route.</span><button class="btn primary" data-tab="entdecken">${ic("compass")}Ziele entdecken</button></div>`;return;}
+/* ===================== PLAN (Tripliste) ===================== */
+let LAST_ORDER=null;
+function renderPlanList(el){const ds=days();const ids=Object.keys(S.plan).filter(byId);
+  if(!ids.length){el.innerHTML=`<div class="empty">${ic("route")}<span>Dein Plan ist leer. Füge unter <b>Entdecken</b> oder <b>Events</b> Ziele hinzu oder lass dir einen <b>Tagesvorschlag</b> machen.</span><button class="btn primary" data-tab="entdecken">${ic("compass")}Ziele entdecken</button></div>`;LAST_ORDER=null;return;}
   const dayOpts=sel=>`<option value="">Ohne Tag</option>`+ds.map(x=>`<option value="${x}"${sel===x?" selected":""}>${fmt(x)}</option>`).join("");
   const groups={};ids.forEach(id=>{const dd=S.plan[id].day&&ds.includes(S.plan[id].day)?S.plan[id].day:"";(groups[dd]=groups[dd]||[]).push(id);});
   const order=[...ds.filter(x=>groups[x]),...(groups[""]?[""]:[])];
   const fd=freeDays();
   const warnFor=(it,day)=>{if(!day)return"";const wd=d(day).getUTCDay();const w=[];
-    if(it.closed&&it.closed.includes(wd))w.push(`${WDL[wd]} geschlossen`);
-    if(it.id==="nam"&&wd===2)w.push("Dienstag erst ab 13:00");
-    if(it.eu25&&fd[day])w.push("heute gratis");
-    if(it.c==="view"&&it.in===false&&d(day).getUTCMonth()>=10)w.push("Sonnenuntergang ca. 17:15");
+    if(ITEMS.includes(it)){const hf=hoursFor(it,day);if(hf&&hf.v>=0&&!hf.spans.length)w.push(`${WD[wd]} geschlossen`);else if(hf&&hf.v>=0&&!(hf.spans[0][0]===0&&hf.spans[0][1]>=1440))w.push(`${spanTxt(hf.spans)}`);}
+    if(it.eu25&&fd[day])w.push("Gratis-Tag, sehr voll");
+    if(it.c==="view"&&it.in===false)w.push(`Sonnenuntergang ${hhmm(sunsetMin(day))}`);
     if(day.slice(5)==="11-08"&&(it.id==="stadion"||it.c==="trip"))w.push("Marathon: Sperrungen");
     if(day.slice(5)==="10-28"&&["wache","garten","olympieion"].includes(it.id))w.push("Parade: Sperrungen ab 9 Uhr");
-    if(it.e&&it.s&&(day<it.s||day>it.e))w.push("Event findet an diesem Tag nicht statt");
-    return w.map(x=>`<span class="b ${x==="heute gratis"?"free":"warn"}">${x}</span>`).join("");};
-  let html=`<div class="ptitle"><h2>Mein Plan</h2><small>${ids.length} Ziele · ${ids.filter(i=>S.plan[i].done).length} erledigt</small></div>
-   ${S.sample?`<div class="notice">${ic("alert")}<span><b>Beispielplan</b> zum Ausprobieren. Entferne Einträge oder füge eigene hinzu, dann gehört er dir.</span></div>`:""}`;
-  order.forEach(dd=>{html+=`<div class="planday"><h3>${dd?fmt(dd,true):"Noch ohne Tag"}</h3>${groups[dd].map(id=>{const it=byId(id);const st=S.plan[id];const cat=catOf(it);
-    return `<div class="pitem${st.done?" done":""}"><input class="check" type="checkbox" id="done-${id}" data-done="${id}"${st.done?" checked":""} aria-label="Erledigt: ${esc(it.n)}">${tile(it,true)}<div class="nm">${esc(it.n)}<small>${cat.n}${it.a?" · "+esc(it.a):it.venue?" · "+esc(it.venue):""}${!hasGeo(it)?" · ohne Standort":""}</small></div><select class="sel" id="day-${id}" data-day="${id}" aria-label="Tag wählen">${dayOpts(dd)}</select><button class="iconbtn" data-plan="${id}" aria-label="Entfernen" title="Entfernen">${ic("trash")}</button><div class="badges">${priceBadge(it.p)}${warnFor(it,dd)}</div></div>`;}).join("")}</div>`;});
+    if(it.e&&it.s&&(day<it.s||day>it.e))w.push("Event nicht an diesem Tag");
+    return w.map(x=>`<span class="b ${/geschlossen|Sperrung|nicht an|voll/.test(x)?"warn":""}">${x}</span>`).join("");};
+  if(!S.collapsed)S.collapsed={};
+  // --- Route oben
   const routeDays=["all",...order.filter(x=>x)];if(!routeDays.includes(S.routeDay))S.routeDay="all";
   let pts=ids.map(byId).filter(hasGeo).filter(it=>S.routeDay==="all"||S.plan[it.id].day===S.routeDay);
   if(S.mode==="walk")pts=pts.filter(p=>p.c!=="trip");
@@ -260,21 +260,29 @@ function renderPlan(){const el=$("#p-plan");const ds=days();const ids=Object.key
     legs+=`<div class="leg"><div class="no">${i+1}</div><div><b>${esc(ordered[i].n)}</b><div class="how">${esc(c.how)} · <a href="${legLink(ordered[i-1],ordered[i],S.mode)}" target="_blank" rel="noopener">Weg ↗</a></div></div><div class="tm">${kmf(c.km)} km<br>${Math.round(c.min)} Min.</div></div>`;}
   const stay=ordered.reduce((s,p)=>s+(p.dur||45),0);
   const ow=ordered.length?onTheWay(ordered,S.mode):[];const gl=gmapsRoute(ordered,S.mode);
-  html+=`<div class="routebox"><h2>${ic("route")}Route berechnen</h2>
+  LAST_ORDER=ordered.length>1?{name:S.routeDay==="all"?"Meine Athen-Route":`Route ${fmt(S.routeDay)}`,day:S.routeDay==="all"?"":S.routeDay,mode:S.mode,
+    start:ordered[0].id==="me"?{n:"Mein Standort",lat:ordered[0].lat,lon:ordered[0].lon}:null,stops:ordered.filter(p=>p.id!=="me").map(p=>({id:p.id}))}:null;
+  let html=`${S.sample?`<div class="notice">${ic("alert")}<span><b>Beispielplan</b> zum Ausprobieren. Entferne Einträge oder füge eigene hinzu, dann gehört er dir.</span></div>`:""}
+  <details class="routebox fold" id="routeFold"${S.collapsed.__route?"":" open"}><summary><h2>${ic("route")}Route berechnen</h2>${ordered.length>1?`<small>${kmf(tot.km)} km · ${fmtMin(tot.min)}</small>`:""}</summary><div class="foldbody">
    <div class="row"><select id="routeDay" class="sel" aria-label="Tag für die Route">${routeDays.map(x=>`<option value="${x}"${S.routeDay===x?" selected":""}>${x==="all"?"Alle Ziele im Plan":fmt(x,true)}</option>`).join("")}</select>
    <div class="seg" role="group" aria-label="Verkehrsmittel">${[["walk","Zu Fuß"],["transit","Öffis"],["car","Auto"]].map(m=>`<button data-mode="${m[0]}" aria-pressed="${S.mode===m[0]}">${m[1]}</button>`).join("")}</div></div>
    ${cand.length>1||(meObj&&cand.length)?`<div class="row"><label for="routeStart" style="font-size:.82rem;color:var(--muted);font-weight:700">Start</label><select id="routeStart" class="sel">${meObj?`<option value="me"${startSel==="me"?" selected":""}>📍 Mein Standort</option>`:""}${cand.map(p=>`<option value="${p.id}"${p.id===startSel?" selected":""}>${esc(p.n)}</option>`).join("")}</select>${meObj?"":`<button class="btn ghost" id="locBtn2">${ic("locate")}Ab meinem Standort</button>`}</div>`:""}
    ${S.mode==="walk"&&ids.map(byId).some(p=>p.c==="trip")?`<div class="tip">Tagesausflüge sind zu Fuß ausgeblendet, wähle Öffis oder Auto.</div>`:""}
    ${ordered.length<2?`<div class="empty">${ic("pin")}Für eine Route brauchst du mindestens zwei Ziele mit Standort${S.routeDay!=="all"?" an diesem Tag":""}.</div>`:`
-   <div class="sumgrid"><div><b>${kmf(tot.km)} km</b><span>Wege ≈</span></div><div><b>${Math.round(tot.min)} Min.</b><span>unterwegs ≈</span></div><div><b>${kmf(stay/60)} h</b><span>Aufenthalt ≈</span></div><div><b>${kmf((tot.min+stay)/60)} h</b><span>gesamt ≈</span></div></div>
-   ${(tot.min+stay)>600?`<div class="notice warn">${ic("alert")}<span><b>Viel für einen Tag:</b> über 10 Stunden. Verteile die Ziele auf mehrere Tage.</span></div>`:""}
+   <div class="sumgrid"><div><b>${kmf(tot.km)} km</b><span>Wege ≈</span></div><div><b>${Math.round(tot.min)} Min.</b><span>unterwegs ≈</span></div><div><b>${kmf(stay/60)} h</b><span>vor Ort ≈</span></div><div><b>${kmf((tot.min+stay)/60)} h</b><span>gesamt ≈</span></div></div>
+   ${(tot.min+stay)>600?`<div class="notice warn">${ic("alert")}<span><b>Viel für einen Tag:</b> über 10 Stunden. Verteile die Ziele auf mehrere Tage oder nutze den Tagesvorschlag.</span></div>`:""}
    <div class="mapbox">${mapSVG(ordered,{route:ordered})}${mapCaption()}</div>
    <div class="legs"><div class="leg"><div class="no"${ordered[0].id==="me"?' style="background:var(--rain)"':""}>1</div><div><b>${esc(ordered[0].n)}</b><div class="how">Start</div></div><div class="tm"></div></div>${legs}</div>
-   ${gl?`<a class="btn primary" style="justify-content:center;padding:12px" href="${gl}" target="_blank" rel="noopener">${ic("map")}Ganze Route in Google Maps</a>`:""}
-   <div class="tip">Reihenfolge per Nächster-Nachbar plus 2-opt optimiert. Zeiten sind Schätzungen (Fuß 4,5 km/h, Stadtverkehr 18 km/h, Metro inkl. Fußwegen und Wartezeit).${S.mode==="transit"?" Google Maps unterstützt bei Öffis keine Zwischenstopps, nutze dafür die Links pro Abschnitt.":""}</div>`}
+   <div class="actions"><button class="btn primary" data-act="saveplan">${ic("bookmark")}Route speichern</button>${LAST_ORDER?shareBtns(LAST_ORDER,"plan"):""}${gl?`<a class="btn ghost" href="${gl}" target="_blank" rel="noopener">${ic("map")}Google Maps</a>`:""}</div>
+   <div class="tip">Reihenfolge per Nächster-Nachbar plus 2-opt optimiert. Zeiten sind Schätzungen.${S.mode==="transit"?" Google Maps unterstützt bei Öffis keine Zwischenstopps, nutze dafür die Links pro Abschnitt.":""}</div>`}
    ${ow.length?`<div><h3 style="font-size:1rem;margin-bottom:4px">Liegt auf dem Weg</h3><div class="legs">${ow.map(([i,dist])=>`<div class="leg" style="grid-template-columns:38px minmax(0,1fr) auto;align-items:center">${tile(i,true)}<div><b>${esc(i.n)}</b><div class="how">${catOf(i).n} · ${Math.round(dist*1000)} m Umweg${i.p&&i.p.t?" · "+esc(i.p.t):""}</div></div><div>${planBtn(i.id,S.routeDay!=="all"?S.routeDay:"")}</div></div>`).join("")}</div></div>`:""}
-  </div>
-  <button class="btn ghost" id="clearPlan" style="align-self:center">${ic("trash")}Plan leeren</button>`;
+  </div></details>
+  <div class="row" style="justify-content:space-between"><small style="color:var(--muted)">${ids.length} Ziele · ${ids.filter(i=>S.plan[i].done).length} erledigt</small><button class="btn ghost" data-act="foldall">${ic(order.some(x=>S.collapsed[x||"none"])?"down":"up")}${order.some(x=>S.collapsed[x||"none"])?"Alle aufklappen":"Alle einklappen"}</button></div>`;
+  order.forEach(dd=>{const key=dd||"none";const list=groups[dd];const done=list.filter(i=>S.plan[i].done).length;
+    html+=`<details class="planday" data-dkey="${key}"${S.collapsed[key]?"":" open"}><summary><span class="pd-t">${dd?fmt(dd,true):"Noch ohne Tag"}</span><span class="pd-n">${list.length} Ziele${done?` · ${done} erledigt`:""}</span></summary><div class="pd-body">${list.map(id=>{const it=byId(id);const st=S.plan[id];const cat=catOf(it);
+    return `<div class="pitem${st.done?" done":""}"><input class="check" type="checkbox" id="done-${id}" data-done="${id}"${st.done?" checked":""} aria-label="Erledigt: ${esc(it.n)}">${tile(it,true)}<div class="nm">${esc(it.n)}<small>${cat.n}${it.a?" · "+esc(it.a):it.venue?" · "+esc(it.venue):""}${!hasGeo(it)?" · ohne Standort":""}</small></div><button class="iconbtn" data-plan="${id}" aria-label="Entfernen" title="Entfernen">${ic("trash")}</button>
+     <div class="pmeta"><select class="sel small" id="day-${id}" data-day="${id}" aria-label="Tag wählen">${dayOpts(dd)}</select>${priceBadge(it.p)}${warnFor(it,dd)}</div></div>`;}).join("")}</div></details>`;});
+  html+=`<button class="btn ghost" id="clearPlan" style="align-self:center">${ic("trash")}Plan leeren</button>`;
   el.innerHTML=html;ordered.forEach(p=>delete p._no);}
 
 /* ===================== PRAKTISCH ===================== */
@@ -374,8 +382,11 @@ document.addEventListener("keydown",e=>{
 function goTo(id){const it=byId(id);if(!it||!ITEMS.includes(it))return;if(S.tab!=="entdecken")setTab("entdecken");
   if(S.cats.length&&!S.cats.includes(it.c))S.cats=[];if(S.q&&!filteredItems().includes(it))S.q="";
   S.view="list";hlId=id;save();renderDiscover();const c=document.getElementById("card-"+id);if(c)c.scrollIntoView({behavior:"smooth",block:"center"});}
+function setDate(t){if(!t.value)return;const k=t.id==="dStart"?"start":"end";if(S[k]===t.value)return;S[k]=t.value;if(S.end<S.start){if(k==="start")S.end=S.start;else S.start=S.end;}save();renderAll();}
+document.addEventListener("input",e=>{if(e.target.id==="dStart"||e.target.id==="dEnd")setDate(e.target);});
+window.addEventListener("pagehide",save);document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")save();});
 document.addEventListener("change",e=>{const t=e.target;
-  if(t.id==="dStart"||t.id==="dEnd"){if(!t.value)return;S[t.id==="dStart"?"start":"end"]=t.value;if(S.end<S.start){if(t.id==="dStart")S.end=S.start;else S.start=S.end;}save();renderAll();return;}
+  if(t.id==="dStart"||t.id==="dEnd"){setDate(t);return;}
   const map={tRain:"rain",tRain2:"rain",tVeg:"veg",tVegan:"vegan",tLf:"lf"};
   if(map[t.id]){S[map[t.id]]=t.checked;if(t.id==="tVegan"&&t.checked)S.veg=true;if(t.id==="tVeg"&&!t.checked)S.vegan=false;save();renderAll();if(t.id==="tRain")toast(t.checked?"Regentag-Modus an":"Regentag-Modus aus");return;}
   if(t.dataset.done){S.plan[t.dataset.done].done=t.checked;save();renderPlan();return;}
@@ -384,8 +395,3 @@ document.addEventListener("change",e=>{const t=e.target;
   if(t.id==="routeStart"){S.routeStart=t.value;save();renderPlan();return;}
 });
 
-if(S.sample&&!Object.keys(S.plan).length){
-  [["akropolis","2026-11-06"],["akromuseum","2026-11-06"],["filopappou","2026-11-06"],["veganaki","2026-11-06"],
-   ["nam","2026-11-07"],["taf","2026-11-07"],["veganbeat","2026-11-07"],["lykabettus","2026-11-07"]]
-  .forEach(([id,day])=>S.plan[id]={day,done:false});}
-renderAll();setTab(TABS.includes(location.hash.slice(1))?location.hash.slice(1):(S.tab||"entdecken"));
