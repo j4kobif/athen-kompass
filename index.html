@@ -1,0 +1,939 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Persönlicher Reiseplaner für Athen: Sehenswürdigkeiten, vegane und vegetarische Lokale, Events, Preise und Routen.">
+<meta name="theme-color" content="#0B0E10" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F2F4F3" media="(prefers-color-scheme: light)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Athen-Kompass">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Athen-Kompass</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400;500;600;700;800&family=GFS+Didot&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: one-column phone app (max 720px). Compact app bar on top (trip dates + rain switch), content panels, fixed bottom tab bar with outline icons; active tab in mint. Dark-first, light variant via prefers-color-scheme. */
+:root{
+  --bg:#0B0E10; --surface:#151A1E; --surface2:#1C2227; --nav:#0D1113; --line:#262E34; --ink:#E9EDEF; --muted:#8F9BA3;
+  --accent:#7DD892; --accent-ink:#0A1A0F; --accent-soft:#18301F;
+  --ok:#7DD892; --warn:#F0B35E; --warn-soft:#33270F; --rain:#8FB0FF; --rain-soft:#18223A;
+  --m1:#2DBB84; --m2:#FF5468; --m3:#4DA3E8; --tram:#A9BD55;
+  --park:#16271B; --hill:#2C2A22; --mapbg:#101518; --mapline:#1C2328;
+  --c-sight:#5ED1C1; --c-museum:#B59CFF; --c-view:#F2B45A; --c-cafe:#D9A77E; --c-food:#7DD892; --c-bar:#F27BA0; --c-act:#6FB3FF; --c-trip:#C5D46A; --c-event:#FF8F5A;
+  --f-display:"GFS Didot","Didot","Bodoni 72",Georgia,serif;
+  --f-body:"Commissioner",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:18px; --r-s:12px; --navh:72px;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
+  --bg:#F2F4F3; --surface:#FFFFFF; --surface2:#EBEFED; --nav:#FFFFFF; --line:#DDE3E0; --ink:#12181B; --muted:#5B676D;
+  --accent:#1E8A45; --accent-ink:#FFFFFF; --accent-soft:#DCF1E2;
+  --ok:#1E8A45; --warn:#9A5A00; --warn-soft:#F8EAD5; --rain:#3557B0; --rain-soft:#E1E8FA;
+  --m1:#00985F; --m2:#D7002A; --m3:#0067B1; --tram:#7A8C2E;
+  --park:#D3E6D2; --hill:#E4DDCB; --mapbg:#F7F8F5; --mapline:#E6EAE6;
+  --c-sight:#0B7C70; --c-museum:#6A4DC2; --c-view:#B26A00; --c-cafe:#8A5A3C; --c-food:#1E8A45; --c-bar:#C02F62; --c-act:#2565B8; --c-trip:#5F6E1E; --c-event:#C9470F;
+  color-scheme:light}}
+:root[data-theme="light"]{
+  --bg:#F2F4F3; --surface:#FFFFFF; --surface2:#EBEFED; --nav:#FFFFFF; --line:#DDE3E0; --ink:#12181B; --muted:#5B676D;
+  --accent:#1E8A45; --accent-ink:#FFFFFF; --accent-soft:#DCF1E2;
+  --ok:#1E8A45; --warn:#9A5A00; --warn-soft:#F8EAD5; --rain:#3557B0; --rain-soft:#E1E8FA;
+  --m1:#00985F; --m2:#D7002A; --m3:#0067B1; --tram:#7A8C2E;
+  --park:#D3E6D2; --hill:#E4DDCB; --mapbg:#F7F8F5; --mapline:#E6EAE6;
+  --c-sight:#0B7C70; --c-museum:#6A4DC2; --c-view:#B26A00; --c-cafe:#8A5A3C; --c-food:#1E8A45; --c-bar:#C02F62; --c-act:#2565B8; --c-trip:#5F6E1E; --c-event:#C9470F;
+  color-scheme:light}
+*{box-sizing:border-box}
+html{-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+.wrap{max-width:720px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{text-wrap:balance;margin:0}
+a{color:var(--accent)}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* app bar */
+header.appbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.appbar .wrap{display:flex;align-items:center;gap:10px;padding-block:10px}
+.logo{display:flex;flex-direction:column;line-height:1.1;min-width:0;flex:1}
+.logo b{font-weight:800;font-size:1.12rem;letter-spacing:-.01em}
+.logo span{font-family:var(--f-display);color:var(--accent);font-size:.92rem}
+.pill{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 12px;font-size:.84rem;font-weight:600;cursor:pointer;white-space:nowrap}
+.pill svg.i{width:17px;height:17px;color:var(--muted)}
+.roundbtn{position:relative;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--surface);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);flex:none}
+.roundbtn input{position:absolute;opacity:0;pointer-events:none}
+.roundbtn.on{background:var(--rain-soft);border-color:var(--rain);color:var(--rain)}
+
+/* bottom tab bar */
+nav.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:25;background:var(--nav);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+nav.tabbar .in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:repeat(5,minmax(0,1fr))}
+nav.tabbar button{border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;height:var(--navh);color:var(--muted);font-weight:600;font-size:.74rem;cursor:pointer;position:relative;padding:0 2px}
+nav.tabbar button svg.i{width:27px;height:27px;stroke-width:1.9;transition:transform .15s}
+nav.tabbar button[aria-selected=true]{color:var(--accent)}
+nav.tabbar button[aria-selected=true] svg.i{transform:translateY(-1px)}
+nav.tabbar button span.l{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+nav.tabbar .count{position:absolute;top:9px;left:calc(50% + 7px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--accent);color:var(--accent-ink);font-size:.68rem;line-height:18px;text-align:center;font-weight:800}
+nav.tabbar .count[data-n="0"]{display:none}
+
+main{padding-block:16px calc(var(--navh) + 32px + env(safe-area-inset-bottom,0px))}
+.panel{display:flex;flex-direction:column;gap:18px}
+.ptitle{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.ptitle h2{font-size:1.55rem;font-weight:800;letter-spacing:-.02em}
+.ptitle small{color:var(--muted);font-size:.84rem}
+.lede{color:var(--muted);margin:0;font-size:.92rem}
+.notice{display:flex;gap:10px;align-items:flex-start;border-radius:var(--r-s);padding:11px 13px;font-size:.88rem;background:var(--surface);border:1px solid var(--line)}
+.notice svg.i{width:19px;height:19px;margin-top:1px}
+.notice.rain{background:var(--rain-soft);border-color:transparent;color:var(--ink)}
+.notice.rain svg.i{color:var(--rain)}
+.notice.warn{background:var(--warn-soft);border-color:transparent}
+.notice.warn svg.i{color:var(--warn)}
+
+/* hero */
+.hero{border-radius:var(--r);padding:18px;background:linear-gradient(155deg,color-mix(in srgb,var(--accent) 22%,var(--surface)) 0%,var(--surface) 62%);border:1px solid var(--line);display:flex;flex-direction:column;gap:14px;position:relative;overflow:hidden}
+.hero .greet{font-family:var(--f-display);font-size:1.15rem;color:var(--accent)}
+.hero h2{font-size:1.75rem;font-weight:800;letter-spacing:-.02em;line-height:1.15}
+.hero .sub{color:var(--muted);font-size:.88rem}
+.hero .cols{position:absolute;right:-6px;bottom:-4px;width:140px;height:auto;opacity:.16;color:var(--ink);pointer-events:none}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.stat{background:color-mix(in srgb,var(--bg) 55%,transparent);border:1px solid var(--line);border-radius:var(--r-s);padding:10px;cursor:pointer;text-align:left}
+.stat b{display:block;font-size:1.35rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
+.stat span{font-size:.74rem;color:var(--muted)}
+
+/* search + chips */
+.searchbox{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:0 14px}
+.searchbox svg.i{width:18px;height:18px;color:var(--muted)}
+.searchbox input{flex:1;min-width:0;border:0;background:none;padding:11px 0;font-size:.92rem;outline:none}
+.chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin-inline:-16px;padding-inline:16px;padding-block:2px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 13px;font-size:.84rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;color:var(--ink)}
+.chip svg.i{width:16px;height:16px}
+.chip[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.seg{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px}
+.seg button{border:0;background:none;padding:6px 13px;border-radius:999px;font-size:.84rem;font-weight:600;cursor:pointer;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+.seg button svg.i{width:16px;height:16px}
+.seg button[aria-pressed=true]{background:var(--surface2);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
+
+/* map */
+.mapbox{background:var(--mapbg);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.mapbox svg{display:block;width:100%;height:auto}
+.mapcap{display:flex;flex-wrap:wrap;gap:4px 12px;padding:9px 13px;font-size:.72rem;color:var(--muted);border-top:1px solid var(--line)}
+.mapcap span{display:inline-flex;align-items:center;gap:5px}
+.mapcap i{display:inline-block;width:14px;height:3px;border-radius:2px}
+.marker{cursor:pointer}
+.marker circle{stroke:var(--mapbg);stroke-width:2.5}
+.marker.dim{opacity:.25}
+.marker.hl circle{stroke:var(--ink);stroke-width:3}
+
+/* cards */
+.list{display:flex;flex-direction:column;gap:12px;min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:9px;min-width:0;scroll-margin-top:90px;position:relative}
+.card.hl{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.card.dim{opacity:.55}
+.card-h{display:flex;gap:12px;align-items:flex-start}
+.tile{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex:none;background:color-mix(in srgb,var(--cc) 16%,transparent);color:var(--cc)}
+.tile svg.i{width:24px;height:24px}
+.tile.s{width:38px;height:38px;border-radius:11px}
+.tile.s svg.i{width:20px;height:20px}
+.card-h .t{flex:1;min-width:0}
+.card h3{font-size:1.02rem;font-weight:700;line-height:1.3}
+.meta{font-size:.78rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:2px 10px;margin-top:1px}
+.cat{font-size:.68rem;text-transform:uppercase;letter-spacing:.09em;font-weight:800;color:var(--cc)}
+.card p{margin:0;font-size:.9rem;color:color-mix(in srgb,var(--ink) 86%,var(--muted))}
+.tip{font-size:.84rem;color:var(--muted)}
+.tip b{color:var(--ink);font-weight:600}
+.badges{display:flex;flex-wrap:wrap;gap:6px}
+.b{font-size:.72rem;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--surface2);color:var(--ink);white-space:nowrap;text-decoration:none}
+.b.price{font-family:var(--f-mono);font-weight:500;font-variant-numeric:tabular-nums;background:var(--accent-soft);color:var(--ink)}
+.b.est{background:transparent;border:1px dashed var(--muted)}
+.b.free{background:var(--accent);color:var(--accent-ink)}
+.b.in{background:var(--rain-soft);color:var(--rain)}
+.b.warn{background:var(--warn-soft);color:var(--warn)}
+.b.veg{background:transparent;border:1px solid var(--ok);color:var(--ok)}
+.b.milk{background:transparent;border:1px solid var(--warn);color:var(--warn)}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:2px}
+.btn{border:1px solid var(--line);background:var(--surface2);border-radius:999px;padding:8px 13px;font-size:.82rem;font-weight:700;cursor:pointer;text-decoration:none;color:var(--ink);display:inline-flex;align-items:center;gap:6px}
+.btn svg.i{width:16px;height:16px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.added{background:var(--accent-soft);border-color:var(--accent);color:var(--ink)}
+.btn.ghost{background:none}
+.altline{font-size:.82rem;background:var(--rain-soft);border-radius:var(--r-s);padding:8px 11px;display:flex;gap:8px;align-items:center}
+.altline svg.i{width:17px;height:17px;color:var(--rain)}
+.altline button{border:0;background:none;color:var(--rain);font-weight:700;cursor:pointer;padding:0;text-decoration:underline}
+
+/* events */
+.daygroup{display:flex;flex-direction:column;gap:10px}
+.dayhead{display:flex;align-items:center;gap:12px}
+.datebadge{width:52px;flex:none;border-radius:14px;background:var(--surface);border:1px solid var(--line);text-align:center;padding:5px 0;line-height:1.1}
+.datebadge b{display:block;font-size:1.3rem;font-weight:800}
+.datebadge span{font-size:.66rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+.dayhead .w{font-weight:700}
+.flags{display:flex;flex-direction:column;gap:6px}
+.flagrow{display:flex;gap:8px;align-items:flex-start;font-size:.84rem;color:var(--muted)}
+.flag{font-size:.68rem;font-weight:800;padding:2px 8px;border-radius:999px;white-space:nowrap;margin-top:1px}
+.flag.free{background:var(--accent);color:var(--accent-ink)}
+.flag.info{background:var(--surface2);color:var(--muted)}
+
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr))}
+section.block{display:flex;flex-direction:column;gap:12px}
+section.block>h2{font-size:1.15rem;font-weight:800}
+.phr{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:4px 14px}
+.phr div{display:flex;flex-wrap:wrap;gap:2px 12px;align-items:baseline;padding:10px 0;border-bottom:1px solid var(--line)}
+.phr div:last-child{border-bottom:0}
+.phr .g{font-family:var(--f-display);font-size:1.15rem}
+.phr .l{color:var(--muted);font-size:.8rem;font-style:italic}
+.phr .de{margin-left:auto;font-size:.85rem}
+
+details.acc{background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+details.acc>summary{cursor:pointer;padding:14px;font-weight:700;list-style:none;display:flex;align-items:center;gap:12px}
+details.acc>summary::-webkit-details-marker{display:none}
+details.acc>summary::after{content:"";width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin-left:auto;transition:transform .15s}
+details.acc[open]>summary::after{transform:rotate(-135deg)}
+details.acc .body{padding:0 14px 16px;display:flex;flex-direction:column;gap:8px;font-size:.9rem}
+details.acc ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.86rem}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:800}
+td.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* plan */
+.planday{display:flex;flex-direction:column;gap:8px}
+.planday h3{font-size:.74rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:800}
+.pitem{display:flex;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;flex-wrap:wrap}
+.pitem .nm{flex:1 1 150px;min-width:0;font-weight:700;font-size:.92rem}
+.pitem .nm small{display:block;font-weight:500;color:var(--muted);font-size:.76rem}
+.pitem.done .nm{text-decoration:line-through;color:var(--muted)}
+.pitem .badges{flex-basis:100%;padding-left:82px}
+@media (max-width:400px){.pitem .badges{padding-left:0}}
+.pitem .badges:empty{display:none}
+select.sel{border:1px solid var(--line);background:var(--surface2);border-radius:999px;padding:6px 10px;font-size:.82rem;font-weight:600;max-width:100%}
+.check{appearance:none;-webkit-appearance:none;width:24px;height:24px;border-radius:50%;border:2px solid var(--line);display:inline-grid;place-content:center;cursor:pointer;margin:0;flex:none;background:var(--surface2)}
+.check:checked{background:var(--accent);border-color:var(--accent)}
+.check:checked::after{content:"";width:6px;height:11px;border-right:2.5px solid var(--accent-ink);border-bottom:2.5px solid var(--accent-ink);transform:rotate(45deg) translate(-1px,-1px)}
+.iconbtn{border:0;background:none;color:var(--muted);cursor:pointer;padding:6px;border-radius:50%;display:inline-flex}
+.iconbtn svg.i{width:18px;height:18px}
+.routebox{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:14px}
+.routebox h2{font-size:1.15rem;font-weight:800;display:flex;align-items:center;gap:8px}
+.routebox h2 svg.i{color:var(--accent)}
+.legs{display:flex;flex-direction:column}
+.leg{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:4px 12px;align-items:start;padding:10px 0;border-bottom:1px solid var(--line)}
+.leg:last-child{border-bottom:0}
+.leg .no{width:26px;height:26px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:.78rem;font-weight:800;display:flex;align-items:center;justify-content:center}
+.leg .how{font-size:.8rem;color:var(--muted)}
+.leg .tm{font-family:var(--f-mono);font-size:.78rem;text-align:right;white-space:nowrap;color:var(--muted)}
+.sumgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+@media (max-width:460px){.sumgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.sumgrid div{background:var(--surface2);border-radius:var(--r-s);padding:9px 10px}
+.sumgrid b{display:block;font-family:var(--f-mono);font-size:1rem;font-variant-numeric:tabular-nums}
+.sumgrid span{font-size:.72rem;color:var(--muted)}
+.empty{border:1.5px dashed var(--line);border-radius:var(--r);padding:28px 18px;text-align:center;color:var(--muted);font-size:.9rem;display:flex;flex-direction:column;align-items:center;gap:10px}
+.empty svg.i{width:34px;height:34px;color:var(--accent)}
+footer{color:var(--muted);font-size:.76rem;padding-top:14px;border-top:1px solid var(--line);margin-top:8px}
+
+/* settings sheet */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:50}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:51;background:var(--surface);border-radius:22px 22px 0 0;border-top:1px solid var(--line);max-height:85vh;overflow:auto;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))}
+.sheet .wrap{display:flex;flex-direction:column;gap:16px;padding-block:10px 0}
+.grab{width:42px;height:5px;border-radius:3px;background:var(--line);margin:0 auto}
+.sheet h2{font-size:1.2rem;font-weight:800}
+.sheet .fl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.sheet label.f{display:flex;flex-direction:column;gap:5px;font-size:.78rem;color:var(--muted);font-weight:700}
+.sheet input[type=date]{border:1px solid var(--line);background:var(--surface2);border-radius:var(--r-s);padding:10px;font-size:.95rem;color:var(--ink);width:100%}
+.switch{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.switch:last-of-type{border-bottom:0}
+.switch .lab{display:flex;flex-direction:column}
+.switch .lab b{font-size:.95rem}
+.switch .lab span{font-size:.78rem;color:var(--muted)}
+.switch input{appearance:none;-webkit-appearance:none;width:46px;height:28px;border-radius:14px;background:var(--line);position:relative;cursor:pointer;flex:none;transition:background .15s;margin:0}
+.switch input::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .15s}
+.switch input:checked{background:var(--accent)}
+.switch input:checked::after{transform:translateX(18px)}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--navh) + 14px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:.85rem;font-weight:600;z-index:40;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+@media (max-width:380px){nav.tabbar button{font-size:.68rem}.logo span{display:none}}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+ <defs>
+  <symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m16.24 7.76-2.12 6.36-6.36 2.12 2.12-6.36z"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+  <symbol id="i-utensils" viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></symbol>
+  <symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5M9 18h6M10 22h4"/></symbol>
+  <symbol id="i-umbrella" viewBox="0 0 24 24"><path d="M22 12a10.06 10.06 0 0 0-20 0ZM12 12v8a2 2 0 0 0 4 0M12 2v1"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+  <symbol id="i-map" viewBox="0 0 24 24"><path d="M14.1 6.1 9.9 3.9a2 2 0 0 0-1.8 0L3.6 6.2A1 1 0 0 0 3 7.1v12.3a1 1 0 0 0 1.4.9l3.7-1.9a2 2 0 0 1 1.8 0l4.2 2.2a2 2 0 0 0 1.8 0l4.5-2.3a1 1 0 0 0 .6-.9V5.1a1 1 0 0 0-1.4-.9l-3.7 1.9a2 2 0 0 1-1.8 0zM15 5.8v15M9 3.2v15"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 4.99-5.54 10.19-7.4 11.8a1 1 0 0 1-1.2 0C9.54 20.19 4 14.99 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></symbol>
+  <symbol id="i-gift" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"/></symbol>
+  <symbol id="i-landmark" viewBox="0 0 24 24"><path d="M3 22h18M6 18v-7M10 18v-7M14 18v-7M18 18v-7M12 2l8 5H4z"/></symbol>
+  <symbol id="i-museum" viewBox="0 0 24 24"><path d="m16 6 4 14M12 6v14M8 8v12M4 4v16"/></symbol>
+  <symbol id="i-mountain" viewBox="0 0 24 24"><path d="m8 3 4 8 5-5 5 15H2L8 3z"/></symbol>
+  <symbol id="i-coffee" viewBox="0 0 24 24"><path d="M17 8h1a4 4 0 1 1 0 8h-1M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4ZM6 2v2M10 2v2M14 2v2"/></symbol>
+  <symbol id="i-wine" viewBox="0 0 24 24"><path d="M8 22h8M7 10h10M12 15v7M12 15a5 5 0 0 0 5-5c0-2-.5-4-2-8H9c-1.5 4-2 6-2 8a5 5 0 0 0 5 5Z"/></symbol>
+  <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2ZM13 5v2M13 17v2M13 11v2"/></symbol>
+  <symbol id="i-ship" viewBox="0 0 24 24"><path d="M2 21c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1s1.2 1 2.5 1c2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1M19.4 20A11.6 11.6 0 0 0 21 14l-9-4-9 4c0 2.9.9 5.3 2.8 7.8M19 13V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v6M12 10v4M12 2v3"/></symbol>
+  <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"/></symbol>
+  <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.2 2 8 0 5.5-4.8 10-10 10ZM2 21c0-3 1.9-5.4 5.2-6"/></symbol>
+  <symbol id="i-train" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="16" rx="2"/><path d="M4 11h16M12 3v8M8 19l-2 3M18 22l-2-3M8 15h.01M16 15h.01"/></symbol>
+  <symbol id="i-coins" viewBox="0 0 24 24"><circle cx="8" cy="8" r="6"/><path d="M18.1 10.4A6 6 0 1 1 10.3 18M7 6h1v4M16.7 13.9l.7.7-2.8 2.8"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.7 9a1 1 0 0 1-.7 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.2-2.7a1.2 1.2 0 0 1 1.6 0C14.5 3.8 17 5 19 5a1 1 0 0 1 1 1z"/></symbol>
+  <symbol id="i-hand" viewBox="0 0 24 24"><path d="M18 11V6a2 2 0 0 0-4 0v0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-5.9-2.4L3.4 16a2 2 0 0 1 3-2.7L8 15"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M17.5 19H9a7 7 0 1 1 6.7-9h1.8a4.5 4.5 0 1 1 0 9Z"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></symbol>
+ </defs>
+</svg>
+
+<header class="appbar">
+  <div class="wrap">
+    <div class="logo"><b>Athen-Kompass</b><span>Αθήνα</span></div>
+    <button class="pill" id="openSettings" aria-haspopup="dialog"><svg class="i"><use href="#i-calendar"/></svg><span id="rangeLabel"></span></button>
+    <label class="roundbtn" id="tRainL" for="tRain" title="Regentag"><input type="checkbox" id="tRain"><svg class="i"><use href="#i-umbrella"/></svg><span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Regentag</span></label>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="panel" id="p-entdecken"></div>
+  <div class="panel" id="p-events" hidden></div>
+  <div class="panel" id="p-essen" hidden></div>
+  <div class="panel" id="p-plan" hidden></div>
+  <div class="panel" id="p-praktisch" hidden></div>
+  <footer>Preise und Termine recherchiert im Oktober 2026 (u. a. Kulturministerium, Hellenic Heritage, OASA, Songkick, This is Athens). <b>Fester Preis</b> = recherchiert, <b>≈</b> = Schätzung aus Erfahrungswerten, <b>Preis prüfen</b> = keine verlässliche Angabe, der Link führt zur Quelle. Dein Plan wird nur in diesem Browser gespeichert.</footer>
+</main>
+
+<nav class="tabbar" aria-label="Navigation">
+  <div class="in" role="tablist" id="tabs">
+    <button role="tab" data-tab="entdecken" aria-selected="true"><svg class="i"><use href="#i-compass"/></svg><span class="l">Entdecken</span></button>
+    <button role="tab" data-tab="events" aria-selected="false"><svg class="i"><use href="#i-calendar"/></svg><span class="l">Events</span></button>
+    <button role="tab" data-tab="essen" aria-selected="false"><svg class="i"><use href="#i-utensils"/></svg><span class="l">Essen</span></button>
+    <button role="tab" data-tab="plan" aria-selected="false"><svg class="i"><use href="#i-route"/></svg><span class="l">Plan</span><span class="count" id="planCount" data-n="0">0</span></button>
+    <button role="tab" data-tab="praktisch" aria-selected="false"><svg class="i"><use href="#i-bulb"/></svg><span class="l">Praktisch</span></button>
+  </div>
+</nav>
+
+<div class="scrim" id="scrim" hidden></div>
+<section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden>
+  <div class="wrap">
+    <div class="grab"></div>
+    <div class="row" style="justify-content:space-between"><h2 id="sheetTitle">Deine Reise</h2><button class="iconbtn" id="closeSettings" aria-label="Schließen"><svg class="i"><use href="#i-x"/></svg></button></div>
+    <div class="fl">
+      <label class="f" for="dStart">Anreise<input type="date" id="dStart" min="2026-10-01" max="2027-12-31"></label>
+      <label class="f" for="dEnd">Abreise<input type="date" id="dEnd" min="2026-10-01" max="2027-12-31"></label>
+    </div>
+    <div>
+      <label class="switch" for="tVeg"><span class="lab"><b>Vegetarisch</b><span>Nur vegetarische Gerichte zeigen</span></span><input type="checkbox" id="tVeg"></label>
+      <label class="switch" for="tVegan"><span class="lab"><b>Vegan</b><span>Nur vegane Lokale und Gerichte</span></span><input type="checkbox" id="tVegan"></label>
+      <label class="switch" for="tLf"><span class="lab"><b>Laktosefrei</b><span>Gerichte ohne Milch zuerst, Warnhinweise</span></span><input type="checkbox" id="tLf"></label>
+      <label class="switch" for="tRain2"><span class="lab"><b>Regentag</b><span>Drinnen-Ziele zuerst, Alternativen zeigen</span></span><input type="checkbox" id="tRain2"></label>
+    </div>
+    <button class="btn primary" id="doneSettings" style="justify-content:center;padding:12px">Fertig</button>
+  </div>
+</section>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ===================== DATA ===================== */
+const CATS={
+  sight:{n:"Sehenswürdigkeit",c:"--c-sight",i:"landmark"}, museum:{n:"Museum",c:"--c-museum",i:"museum"}, view:{n:"Aussicht",c:"--c-view",i:"mountain"},
+  cafe:{n:"Café",c:"--c-cafe",i:"coffee"}, food:{n:"Restaurant",c:"--c-food",i:"utensils"}, bar:{n:"Bar",c:"--c-bar",i:"wine"},
+  act:{n:"Aktivität",c:"--c-act",i:"ticket"}, trip:{n:"Tagesausflug",c:"--c-trip",i:"ship"}, event:{n:"Event",c:"--c-event",i:"music"}
+};
+const HH="https://hhticket.gr/";
+const P=(k,t,n,u)=>({k,t,n,u});
+const ITEMS=[
+ // --- Sehenswürdigkeiten
+ {id:"akropolis",n:"Akropolis & Parthenon",c:"sight",a:"Akropolis",lat:37.9715,lon:23.7257,in:false,dur:150,eu25:true,
+  p:P("fix","€30","Ganzjährig gleicher Preis, Zeitfenster-Ticket (2 h)",HH),
+  d:"Parthenon, Erechtheion mit Karyatiden, Athena-Nike-Tempel. Pflichtprogramm.",
+  tip:"Ticket online auf hhticket.gr mit Zeitslot. Eingang Südhang nutzen, früh um 8:00 oder ab 15:00 ist es am ruhigsten. Winter (1.11.–31.3.): 8–17 Uhr. Bei Regen sind die Marmorstufen sehr rutschig.",alt:"akromuseum",url:HH},
+ {id:"agora",n:"Antike Agora & Hephaistos-Tempel",c:"sight",a:"Thissio",lat:37.9747,lon:23.7224,in:false,dur:90,eu25:true,
+  p:P("fix","€20","",HH),d:"Das politische Herz des antiken Athen, mit dem besterhaltenen Tempel Griechenlands und dem Museum in der Attalos-Stoa.",tip:"Viele halten sie für das beste Preis-Leistungs-Verhältnis der Stadt. Die Attalos-Stoa ist überdacht.",alt:"nam",url:HH},
+ {id:"romagora",n:"Römische Agora & Turm der Winde",c:"sight",a:"Plaka",lat:37.9743,lon:23.7266,in:false,dur:40,eu25:true,
+  p:P("fix","€10","",HH),d:"Kompakte Anlage mit dem achteckigen Turm der Winde, einer antiken Wetterstation.",tip:"Vieles sieht man auch vom Zaun aus.",alt:"akromuseum",url:HH},
+ {id:"hadrian",n:"Hadriansbibliothek",c:"sight",a:"Monastiraki",lat:37.9757,lon:23.7263,in:false,dur:30,eu25:true,
+  p:P("link","Preis prüfen","Kleiner Eintritt, aktuellen Tarif bei Hellenic Heritage prüfen",HH),d:"Römische Bibliotheksanlage direkt am Monastiraki-Platz.",alt:"akromuseum",url:HH},
+ {id:"kerameikos",n:"Kerameikos",c:"sight",a:"Gazi",lat:37.9780,lon:23.7185,in:false,dur:60,eu25:true,
+  p:P("link","Preis prüfen","",HH),d:"Antiker Friedhof mit Grabstelen, ruhig und kaum besucht, mit kleinem Museum.",alt:"nam",url:HH},
+ {id:"olympieion",n:"Tempel des Olympischen Zeus",c:"sight",a:"Zappeio",lat:37.9693,lon:23.7331,in:false,dur:30,eu25:true,
+  p:P("fix","€20","Gilt als schwächstes Preis-Leistungs-Verhältnis",HH),d:"Riesige korinthische Säulen; daneben der Hadriansbogen (frei zugänglich).",tip:"Die Säulen sieht man gut gratis vom Zaun an der Vas. Olgas aus.",alt:"akromuseum",url:HH},
+ {id:"stadion",n:"Panathenäisches Stadion",c:"sight",a:"Pangrati",lat:37.9683,lon:23.7411,in:false,dur:45,
+  p:P("link","Preis prüfen","Eintritt mit Audioguide, aktuellen Preis auf der Website prüfen","https://www.panathenaicstadium.gr/"),d:"Komplett aus Marmor, Austragungsort der ersten modernen Olympischen Spiele 1896 und Ziel des Athen-Marathons.",tip:"Am Marathon-Wochenende (7./8.11.2026) eingeschränkt zugänglich.",alt:"benaki",url:"https://www.panathenaicstadium.gr/"},
+ {id:"plaka",n:"Plaka & Anafiotika",c:"sight",a:"Plaka",lat:37.9728,lon:23.7287,in:false,dur:75,
+  p:P("free","Frei"),d:"Altstadtgassen unter der Akropolis. Anafiotika wirkt mit weißen Häuschen wie ein Kykladendorf.",tip:"Durch die Gassen oberhalb der Stratonos laufen; die Restaurant-Schlepper in der Kydathineon einfach ignorieren.",alt:"benaki"},
+ {id:"monastiraki",n:"Monastiraki & Flohmarkt",c:"sight",a:"Monastiraki",lat:37.9761,lon:23.7247,in:false,dur:60,
+  p:P("free","Frei"),d:"Trubel, Souvenirs, Trödel. Sonntags großer Flohmarkt rund um Avissinias-Platz.",tip:"Taschendiebe! Rucksack nach vorn.",alt:"varvakios"},
+ {id:"wache",n:"Wachablösung am Syntagma",c:"sight",a:"Syntagma",lat:37.9753,lon:23.7368,in:false,dur:20,
+  p:P("free","Frei"),d:"Die Evzonen vor dem Grab des Unbekannten Soldaten, jede volle Stunde.",tip:"Sonntags um 11:00 die große Zeremonie mit Musikkapelle.",alt:"nam"},
+ {id:"garten",n:"Nationalgarten & Zappeion",c:"sight",a:"Syntagma",lat:37.9727,lon:23.7372,in:false,dur:45,
+  p:P("free","Frei"),d:"Schattiger Park hinter dem Parlament, am Südende das Zappeion.",alt:"benaki"},
+ {id:"varvakios",n:"Zentralmarkt Varvakios",c:"sight",a:"Omonia",lat:37.9813,lon:23.7272,in:true,dur:40,closed:[0],
+  p:P("free","Frei"),d:"Überdachte Fleisch- und Fischhalle, gegenüber Obst, Gemüse, Oliven, Gewürze.",tip:"Sonntags geschlossen. Für Vegetarier: direkt in die Obst- und Gewürzgassen gegenüber (Evripidou)."},
+ {id:"kypseli",n:"Markthalle Kypseli",c:"sight",a:"Kypseli",lat:37.9985,lon:23.7395,in:true,dur:45,
+  p:P("free","Frei"),d:"Restaurierte Markthalle mit Initiativen, Cafés und Veranstaltungen in einem sehr lokalen Viertel."},
+ {id:"streetart",n:"Street Art in Psyrri & Exarchia",c:"sight",a:"Psyrri",lat:37.9785,lon:23.7235,in:false,dur:60,
+  p:P("free","Frei"),d:"Riesige Murals in Psyrri, politischere Wände in Exarchia.",tip:"Exarchia abends rund um den 17. November meiden.",alt:"benaki"},
+ {id:"snfcc",n:"Stavros Niarchos Kulturzentrum (SNFCC)",c:"sight",a:"Kallithea",lat:37.9397,lon:23.6912,in:"mix",dur:120,
+  p:P("free","Frei","Park, Leuchtturm-Terrasse und Bibliothek kostenlos; Oper kostenpflichtig","https://www.snfcc.org/en"),d:"Renzo-Piano-Bau mit Park, Kanal, Nationalbibliothek und Nationaloper. Ab Ende November Weihnachtswelt mit Eisbahn.",tip:"Kostenloser Shuttle ab Syntagma lohnt sich (Zeiten auf snfcc.org).",url:"https://www.snfcc.org/en"},
+ {id:"mikrolimano",n:"Mikrolimano (Piräus)",c:"sight",a:"Piräus",lat:37.9362,lon:23.6600,in:false,dur:90,
+  p:P("free","Frei"),d:"Kleiner Yachthafen mit Uferpromenade, nettes Abendziel am Meer.",tip:"Metro M1 bis Neo Faliro, dann 10 Min. zu Fuß.",alt:"snfcc"},
+ // --- Museen
+ {id:"akromuseum",n:"Akropolismuseum",c:"museum",a:"Makrygianni",lat:37.9685,lon:23.7285,in:true,dur:120,
+  p:P("fix","€20","Ganzjährig; Ermäßigungen nur an der Kasse mit Ausweis","https://www.theacropolismuseum.gr/en"),d:"Originale vom Parthenon-Fries, Karyatiden, Glasboden über einem antiken Wohnviertel.",tip:"Ideal mittags oder bei Regen. Gratis am 28. Oktober. Restaurant-Terrasse mit Akropolisblick.",url:"https://www.theacropolismuseum.gr/en"},
+ {id:"nam",n:"Archäologisches Nationalmuseum",c:"museum",a:"Exarchia",lat:37.9890,lon:23.7322,in:true,dur:150,eu25:true,
+  p:P("fix","€20","Seit 1.1.2026, ganzjährig","https://www.namuseum.gr/en/"),d:"Die größte Sammlung antiker griechischer Kunst: Maske des Agamemnon, Antikythera-Mechanismus, Poseidon von Artemision.",tip:"Dienstags erst ab 13:00 geöffnet.",url:"https://www.namuseum.gr/en/"},
+ {id:"benaki",n:"Benaki-Museum",c:"museum",a:"Kolonaki",lat:37.9757,lon:23.7403,in:true,dur:90,
+  p:P("link","Preis prüfen","","https://www.benaki.org/"),d:"Griechische Kultur von der Antike bis ins 20. Jh. Dachcafé mit Blick auf den Nationalgarten.",url:"https://www.benaki.org/"},
+ {id:"kykladen",n:"Museum für Kykladische Kunst",c:"museum",a:"Kolonaki",lat:37.9750,lon:23.7447,in:true,dur:75,
+  p:P("link","Preis prüfen","","https://cycladic.gr/en"),d:"Die berühmten minimalistischen Marmorfiguren der Kykladen, dazu gute Wechselausstellungen.",url:"https://cycladic.gr/en"},
+ {id:"onassis",n:"Onassis Stegi",c:"museum",a:"Neos Kosmos",lat:37.9582,lon:23.7247,in:true,dur:120,
+  p:P("link","Preis prüfen","Programm Oktober–Juli, Tickets online","https://tickets.onassis.org/"),d:"Zeitgenössische Kultur: Theater, Konzerte, Tanz, Ausstellungen. Das Programm ist oft auch auf Englisch.",url:"https://www.onassis.org/"},
+ {id:"technopolis",n:"Technopolis Gazi",c:"museum",a:"Gazi",lat:37.9786,lon:23.7126,in:"mix",dur:60,
+  p:P("free","Meist frei","Eintritt je nach Ausstellung"),d:"Altes Gaswerk, heute Kulturzentrum mit Ausstellungen und Events; drumherum Ausgehviertel Gazi."},
+ {id:"megaron",n:"Megaron – Athener Konzerthalle",c:"museum",a:"Ambelokipi",lat:37.9790,lon:23.7520,in:true,dur:150,
+  p:P("link","Preis prüfen","Je nach Konzert","https://www.megaron.gr/en/"),d:"Klassik, Ballett, Jazz. Gut für einen Regenabend.",url:"https://www.megaron.gr/en/"},
+ // --- Aussicht
+ {id:"lykabettus",n:"Lykabettus-Hügel",c:"view",a:"Kolonaki",lat:37.9818,lon:23.7432,in:false,dur:90,
+  p:P("est","≈ €10 hin & zurück","Standseilbahn ab Kolonaki; zu Fuß kostenlos (ca. 30 Min. Aufstieg)"),d:"Höchster Punkt im Zentrum, 360°-Blick bis zum Meer. Klassiker zum Sonnenuntergang.",tip:"Im November geht die Sonne gegen 17:15 unter. Den Weg ab Aristippou-Straße gehen.",alt:"kykladen"},
+ {id:"areopag",n:"Areopag-Felsen",c:"view",a:"Akropolis",lat:37.9723,lon:23.7238,in:false,dur:30,
+  p:P("free","Frei"),d:"Glatter Fels direkt unter der Akropolis mit Blick über Agora und Stadt.",tip:"Bei Nässe extrem rutschig.",alt:"akromuseum"},
+ {id:"filopappou",n:"Filopappou-Hügel",c:"view",a:"Koukaki",lat:37.9681,lon:23.7193,in:false,dur:60,
+  p:P("free","Frei"),d:"Pinienhügel gegenüber der Akropolis, schönster Blick auf den Parthenon.",tip:"Kombinierbar mit der Pnyx und der Kirche Agios Dimitrios Loumbardiaris.",alt:"akromuseum"},
+ {id:"pnyx",n:"Pnyx",c:"view",a:"Thissio",lat:37.9715,lon:23.7193,in:false,dur:25,
+  p:P("free","Frei"),d:"Versammlungsort der antiken Demokratie, ruhige Aussicht.",alt:"agora"},
+ {id:"strefi",n:"Strefi-Hügel",c:"view",a:"Exarchia",lat:37.9873,lon:23.7393,in:false,dur:40,
+  p:P("free","Frei"),d:"Der Hügel der Locals in Exarchia: Blick auf Lykabettus und Akropolis, kaum Touristen.",alt:"nam"},
+ {id:"a4athens",n:"A for Athens (Rooftop)",c:"view",a:"Monastiraki",lat:37.9765,lon:23.7251,in:false,dur:60,
+  p:P("est","≈ €12–15 Cocktail","Erfahrungswert, Rooftop-Aufschlag"),d:"Dachbar am Monastiraki-Platz mit frontalem Akropolisblick.",tip:"Im November abends kühl, Jacke einpacken.",alt:"brettos"},
+ // --- Cafés
+ {id:"littletree",n:"Little Tree Books & Coffee",c:"cafe",a:"Makrygianni",lat:37.9673,lon:23.7296,in:true,dur:45,diet:{veg:"opts",vegan:"opts",lf:"easy"},
+  p:P("est","≈ €3–5 Kaffee"),d:"Buchcafé beim Akropolismuseum, gemütlich und ruhig."},
+ {id:"taf",n:"TAF – The Area Coffee",c:"cafe",a:"Exarchia",lat:37.9822,lon:23.7313,in:true,dur:30,diet:{veg:"opts",vegan:"opts",lf:"easy"},
+  p:P("est","≈ €3–5 Kaffee"),d:"Specialty-Röster, perfekt vor dem Nationalmuseum.",tip:"Pflanzenmilch: γάλα βρώμης (Hafermilch)."},
+ {id:"tailor",n:"Tailor Made",c:"cafe",a:"Agia Irini",lat:37.9768,lon:23.7283,in:"mix",dur:30,diet:{veg:"opts",vegan:"opts",lf:"easy"},
+  p:P("est","≈ €3–5 Kaffee"),d:"Rösterei am Agia-Irini-Platz, tagsüber Café, abends Bar."},
+ {id:"holyllama",n:"Holy Llama",c:"cafe",a:"Syntagma",lat:37.9752,lon:23.7340,in:true,dur:45,diet:{veg:"all",vegan:"all",lf:"easy"},
+  p:P("est","≈ €8–14 Brunch"),d:"Rein veganes Café & Bäckerei: Tofu-Scramble, Croissants, Rohkost-Torten.",url:"https://holyllama.gr/"},
+ {id:"lukumades",n:"Lukumades",c:"cafe",a:"Agia Irini",lat:37.9769,lon:23.7275,in:true,dur:20,diet:{veg:"all",vegan:"opts",lf:"ask"},
+  p:P("est","≈ €4–7"),d:"Moderne Loukoumades (Honigbällchen) mit vielen Toppings.",tip:"Klassisch mit Honig und Zimt bestellen; Schoko- oder Eis-Toppings enthalten Milch."},
+ // --- Restaurants (vegetarisch/vegan)
+ {id:"avocado",n:"Avocado",c:"food",a:"Syntagma",lat:37.9739,lon:23.7337,in:true,dur:75,diet:{veg:"all",vegan:"opts",lf:"easy"},
+  p:P("est","≈ €12–18 Hauptgericht"),d:"Das älteste vegetarisch-vegane Restaurant im Zentrum: Bowls, griechische Gemüseteller, Säfte.",url:"https://www.avocadoathens.com/"},
+ {id:"veganbeat",n:"Vegan Beat",c:"food",a:"Psyrri",lat:37.9778,lon:23.7290,in:true,dur:40,diet:{veg:"all",vegan:"all",lf:"easy"},
+  p:P("est","≈ €6–10"),d:"Veganes Streetfood seit 2018: Gyros, Wraps, Burger."},
+ {id:"cookoomela",n:"Cookoomela Grill",c:"food",a:"Exarchia",lat:37.9862,lon:23.7320,in:true,dur:40,diet:{veg:"all",vegan:"all",lf:"easy"},
+  p:P("est","≈ €4–9"),d:"Veganes Souvlaki auf Pilzbasis, sieht aus wie eine normale Souvlaki-Bude."},
+ {id:"veganaki",n:"Veganaki",c:"food",a:"Makrygianni",lat:37.9681,lon:23.7316,in:true,dur:60,diet:{veg:"all",vegan:"all",lf:"easy"},
+  p:P("est","≈ €10–15"),d:"Traditionelle griechische Küche komplett vegan: Moussaka, Pastitsio, Gyros. Auch glutenfreie Optionen.",url:"https://veganaki.gr/"},
+ {id:"mamatierra",n:"Mama Tierra",c:"food",a:"Panepistimio",lat:37.9840,lon:23.7325,in:true,dur:45,diet:{veg:"all",vegan:"opts",lf:"easy"},
+  p:P("est","≈ €8–12"),d:"Helle, einfache vegetarische Kantine nahe Metro Panepistimio."},
+ {id:"feyrouz",n:"Feyrouz",c:"food",a:"Psyrri",lat:37.9780,lon:23.7230,in:true,dur:35,diet:{veg:"opts",vegan:"opts",lf:"ask"},
+  p:P("est","≈ €4–8"),d:"Familienbetrieb mit hauchdünnem Lahmajoun, Pide mit Gemüse und Hülsenfrüchten, Suppen. Sehr günstig.",tip:"Bei Joghurt-Toppings nach Variante ohne fragen."},
+ {id:"falafellas",n:"Falafellas",c:"food",a:"Agia Irini",lat:37.9785,lon:23.7272,in:true,dur:20,diet:{veg:"all",vegan:"opts",lf:"ask"},
+  p:P("est","≈ €4–6"),d:"Schnelle Falafel-Pita in der Aiolou, ideal zwischendurch.",tip:"Ohne Joghurtsauce bestellen, dann laktosefrei."},
+ {id:"diporto",n:"Diporto",c:"food",a:"Omonia",lat:37.9806,lon:23.7259,in:true,dur:50,closed:[0],diet:{veg:"opts",vegan:"opts",lf:"ask"},
+  p:P("est","≈ €8–14"),d:"Uralte Kellertaverne beim Zentralmarkt, keine Speisekarte. Vegetarisch: Revithia (Kichererbsen), Horta, Salat.",tip:"Nur mittags, sonntags zu. Bargeld mitnehmen."},
+ {id:"nefelokokkygia",n:"Ama Lachei stis Nefelokokkygies",c:"food",a:"Exarchia",lat:37.9876,lon:23.7355,in:"mix",dur:90,diet:{veg:"opts",vegan:"opts",lf:"ask"},
+  p:P("est","≈ €10–16 Hauptgericht"),d:"Taverne in einem alten Schulhof mit viel Gemüse auf der Karte, sehr lokal.",tip:"Am Wochenende reservieren."},
+ // --- Bars
+ {id:"babaurum",n:"Baba au Rum",c:"bar",a:"Agia Irini",lat:37.9779,lon:23.7302,in:true,dur:60,
+  p:P("est","≈ €11–14 Cocktail"),d:"Mehrfach ausgezeichnete Rum-Cocktailbar."},
+ {id:"clumsies",n:"The Clumsies",c:"bar",a:"Agia Irini",lat:37.9778,lon:23.7298,in:true,dur:60,
+  p:P("est","≈ €12–15 Cocktail"),d:"Eine der bekanntesten Cocktailbars Europas, tagsüber Café."},
+ {id:"sixdogs",n:"Six d.o.g.s",c:"bar",a:"Monastiraki",lat:37.9772,lon:23.7262,in:"mix",dur:90,
+  p:P("est","≈ €7–12"),d:"Bar mit verwinkeltem Garten und Konzertraum, junges Publikum."},
+ {id:"brettos",n:"Brettos",c:"bar",a:"Plaka",lat:37.9725,lon:23.7307,in:true,dur:45,
+  p:P("est","≈ €5–9"),d:"Älteste Destillerie Athens (1909) mit der berühmten bunten Flaschenwand. Ouzo, Tsipouro, Likör.",tip:"Ouzo mit Wasser und Eis trinken, dazu Meze bestellen."},
+ {id:"noel",n:"Noel",c:"bar",a:"Syntagma",lat:37.9779,lon:23.7290,in:true,dur:60,
+  p:P("est","≈ €11–14 Cocktail"),d:"Opulent dekorierte Bar mit Kronleuchtern, perfekt für einen Regenabend."},
+ // --- Aktivitäten
+ {id:"walktour",n:"Free Walking Tour (Walkative)",c:"act",a:"Zentrum",lat:null,lon:null,in:false,dur:165,
+  p:P("free","Pay what you wish","Trinkgeld nach eigenem Ermessen","https://freewalkingtour.com/athens/welcome-to-athens/"),d:"Altstadt-Tour mit lokalem Guide, ca. 2:45 h. Auch eine Alternative-Athens-Tour zu Street Art.",url:"https://freewalkingtour.com/athens/welcome-to-athens/"},
+ {id:"tram",n:"Mit der Tram ans Meer",c:"act",a:"Syntagma",lat:37.9740,lon:23.7352,in:false,dur:120,
+  p:P("fix","€1,20","90-Minuten-Ticket"),d:"Tram ab Syntagma Richtung Küste (Edem, Flisvos). Spaziergang an der Uferpromenade für den Ticketpreis.",tip:"Das SNFCC liegt auf dem Weg.",alt:"snfcc"},
+ {id:"cineparis",n:"Cine Paris (Dachkino)",c:"act",a:"Plaka",lat:37.9732,lon:23.7303,in:false,dur:140,season:[5,6,7,8,9,10],
+  p:P("link","Preis prüfen","","https://www.cineparis.gr/"),d:"Open-Air-Kino auf dem Dach mit Akropolisblick, Filme meist im Original.",tip:"Nur Mai bis Oktober.",url:"https://www.cineparis.gr/"},
+ {id:"foodtour",n:"Street-Food-Tour",c:"act",a:"Zentrum",lat:null,lon:null,in:"mix",dur:180,
+  p:P("link","Preis prüfen","Anbieter fragen, ob vegetarische Varianten möglich sind","https://www.tickets-athens.com/food-drink/food-tours-in-athens/"),d:"Geführte Tour über Märkte, Bäckereien und Imbisse.",url:"https://www.tickets-athens.com/food-drink/food-tours-in-athens/"},
+ {id:"hymettos",n:"Kloster Kaisariani & Hymettos",c:"act",a:"Kaisariani",lat:37.9604,lon:23.7978,in:false,dur:180,
+  p:P("est","≈ €0–5","Wandern frei, Klosterbesuch evtl. kleiner Eintritt"),d:"Byzantinisches Kloster im Wald am Hausberg, Wanderwege mit Blick über die ganze Stadt.",tip:"Bus 224 bis Endstation, dann bergauf."},
+ {id:"vouliagmeni",n:"See von Vouliagmeni",c:"act",a:"Riviera",lat:37.8078,lon:23.7856,in:false,dur:180,
+  p:P("est","≈ €15–20","Eintrittsspanne laut Erfahrungswerten, vor Ort prüfen","https://www.limnivouliagmenis.gr/"),d:"Thermalsee unter einer Felswand, ganzjährig um 21–24 °C. Baden auch im November.",url:"https://www.limnivouliagmenis.gr/",alt:"snfcc"},
+ // --- Tagesausflüge
+ {id:"sounion",n:"Kap Sounion & Poseidontempel",c:"trip",a:"ca. 70 km",lat:37.6502,lon:24.0246,in:false,dur:360,
+  p:P("link","Preis prüfen","KTEL-Bus ab Pedion Areos ca. 2 h; geführte Sunset-Tour ab ca. €48 (Anbieterpreis)",HH),d:"Tempel auf der Klippe über der Ägäis, berühmt zum Sonnenuntergang.",tip:"Im November früh losfahren, Sonnenuntergang ca. 17:15.",alt:"nam",url:"https://www.ktelattikis.gr/"},
+ {id:"delphi",n:"Delphi",c:"trip",a:"ca. 180 km",lat:38.4824,lon:22.5010,in:"mix",dur:600,
+  p:P("link","Preis prüfen","Kombiticket Stätte + Museum; Bus KTEL ab Liosion ca. 3 h",HH),d:"Orakel-Heiligtum am Parnass, mit sehr gutem Museum (bei Regen perfekt kombinierbar).",url:HH},
+ {id:"aegina",n:"Insel Ägina",c:"trip",a:"Fähre ab Piräus",lat:37.7467,lon:23.4275,in:false,dur:480,
+  p:P("est","≈ €10–17 pro Strecke","Fähre 40–75 Min., Preis je nach Schiff","https://www.ferryhopper.com/"),d:"Nächste Insel: Pistazien, Aphaia-Tempel, Hafenstädtchen.",tip:"Bei Sturm fallen Fähren aus, am Vortag prüfen.",alt:"nam"},
+ {id:"hydra",n:"Insel Hydra",c:"trip",a:"Fähre ab Piräus",lat:37.3497,lon:23.4627,in:false,dur:600,
+  p:P("est","≈ €30–45 pro Strecke","Schnellfähre ca. 2 h","https://www.ferryhopper.com/"),d:"Autofreie Insel mit Steinhäusern und Eseln.",alt:"nam"},
+ {id:"nafplio",n:"Nafplio & Mykene",c:"trip",a:"ca. 140 km",lat:37.5676,lon:22.8053,in:false,dur:660,
+  p:P("link","Preis prüfen","Bus KTEL Argolida oder Tour; Mykene mit Kombiticket",HH),d:"Schönste Kleinstadt der Peloponnes plus Löwentor von Mykene.",alt:"nam"},
+ {id:"meteora",n:"Meteora",c:"trip",a:"ca. 350 km",lat:39.7217,lon:21.6306,in:false,dur:840,
+  p:P("est","ab ≈ €75 Tour","Ganztagestour mit Zug/Bus; als Tagesausflug sehr lang"),d:"Klöster auf Sandsteinfelsen. Besser mit Übernachtung.",alt:"nam"}
+];
+
+const EVENTS=[
+ {id:"ev-agora",n:"Agora Festival – Flavors Edition",s:"2026-10-22",e:"2026-10-25",venue:"Markthalle Kypseli",lat:37.9985,lon:23.7395,in:"mix",
+  p:P("link","Preis prüfen","","https://dak.com.gr/event/agora-flavors-festival/"),d:"Food- und Marktfestival mit Ständen in der Markthalle Kypseli."},
+ {id:"ev-ochi",n:"Ochi-Tag: Paraden",s:"2026-10-28",e:"2026-10-28",venue:"Syntagma / Amalias",lat:37.9755,lon:23.7350,in:false,
+  p:P("free","Frei"),d:"Schüler- und Militärparade vor dem Parlament. Ab 9 Uhr Sperrungen (Amalias, Panepistimiou, Syngrou, Vas. Sofias), Metro & Tram eingeschränkt. Akropolismuseum und staatliche Stätten haben freien Eintritt.",hol:true},
+ {id:"ev-expo",n:"Athens Marathon EXPO",s:"2026-11-06",e:"2026-11-07",venue:"Taekwondo-Halle, Faliro",lat:37.935,lon:23.69,in:true,
+  p:P("link","Preis prüfen","","https://www.athensauthenticmarathon.gr/"),d:"Messe rund um den Marathon mit Startnummernausgabe."},
+ {id:"ev-5k",n:"Marathon-Wochenende: 5-km- und 10-km-Läufe",s:"2026-11-07",e:"2026-11-07",venue:"Panathenäisches Stadion",lat:37.9683,lon:23.7411,in:false,
+  p:P("free","Zuschauen frei"),d:"Stadtläufe mit Zieleinlauf im Marmorstadion."},
+ {id:"ev-marathon",n:"Athens Marathon. The Authentic",s:"2026-11-08",e:"2026-11-08",venue:"Ziel: Panathenäisches Stadion",lat:37.9683,lon:23.7411,in:false,
+  p:P("free","Zuschauen frei"),d:"Original-Strecke von Marathon nach Athen, Start 8:30. Weiträumige Straßensperrungen, nicht mit dem Auto fahren. Zielbereich ab dem späten Vormittag."},
+ {id:"ev-veils",n:"The Veils (Konzert)",s:"2026-11-07",e:"2026-11-07",venue:"Arch Club",in:true,
+  p:P("link","Preis prüfen","","https://www.songkick.com/metro-areas/28976-greece-athens"),d:"Indie-Rock aus Neuseeland."},
+ {id:"ev-xmal",n:"Xmal Deutschland & Anja Huwe",s:"2026-11-11",e:"2026-11-11",venue:"Gazarte, Gazi",lat:37.9785,lon:23.7138,in:true,
+  p:P("link","Preis prüfen","","https://www.songkick.com/metro-areas/28976-greece-athens"),d:"Darkwave-Legenden live."},
+ {id:"ev-polytech",n:"Polytechnio-Gedenktag",s:"2026-11-17",e:"2026-11-17",venue:"Polytechnikum, Patission",lat:37.9876,lon:23.7317,in:false,
+  p:P("free","Frei"),d:"Gedenken an den Aufstand gegen die Junta 1973: Kranzniederlegung und großer Marsch zur US-Botschaft. Ein ernster Tag; Exarchia abends meiden, Verkehr im Zentrum gesperrt.",hol:true},
+ {id:"ev-ezhel",n:"Ezhel (Konzert)",s:"2026-11-20",e:"2026-11-20",venue:"Fuzz Live Music Club",in:true,
+  p:P("link","Preis prüfen","","https://www.songkick.com/metro-areas/28976-greece-athens"),d:"Türkischer Rap-Star."},
+ {id:"ev-kvb",n:"The KVB (Konzert)",s:"2026-11-21",e:"2026-11-21",venue:"Gazarte, Gazi",lat:37.9785,lon:23.7138,in:true,
+  p:P("link","Preis prüfen","","https://www.songkick.com/metro-areas/28976-greece-athens"),d:"Psych/Shoegaze-Duo."},
+ {id:"ev-prong",n:"Prong (Konzert)",s:"2026-11-22",e:"2026-11-22",venue:"Gazarte Ground Stage, Gazi",lat:37.9785,lon:23.7138,in:true,
+  p:P("link","Preis prüfen","","https://www.songkick.com/metro-areas/28976-greece-athens"),d:"Metal/Hardcore aus New York."},
+ {id:"ev-kreator",n:"Kreator (Konzert)",s:"2026-11-23",e:"2026-11-23",venue:"Floyd Live Music Venue",in:true,
+  p:P("link","Preis prüfen","","https://www.songkick.com/metro-areas/28976-greece-athens"),d:"Thrash Metal aus Essen."},
+ {id:"ev-xmas",n:"Weihnachtsbaum Syntagma & SNFCC-Weihnachtswelt",s:"2026-11-25",e:"2026-11-30",venue:"Syntagma & SNFCC",lat:37.9755,lon:23.7350,in:false,
+  p:P("free","Frei"),d:"Baumbeleuchtung am Syntagma und Start der SNFCC-Weihnachtswelt mit Eisbahn und Lichtinstallationen. Genaues Datum noch offen (2025 war es der 27. bzw. 29.11.)."},
+ {id:"ev-acidarab",n:"Acid Arab (DJ-Set)",s:"2026-11-27",e:"2026-11-27",venue:"Arch Club",in:true,
+  p:P("link","Preis prüfen","","https://www.songkick.com/metro-areas/28976-greece-athens"),d:"Elektronik trifft arabische Musik."},
+ {id:"ev-arabstrap",n:"Arab Strap (Konzert)",s:"2026-11-29",e:"2026-11-29",venue:"Gazarte Ground Stage, Gazi",lat:37.9785,lon:23.7138,in:true,
+  p:P("link","Preis prüfen","","https://www.songkick.com/metro-areas/28976-greece-athens"),d:"Schottischer Indie."},
+ {id:"ev-hvob",n:"HVOB (Konzert)",s:"2026-11-30",e:"2026-11-30",venue:"Gazarte, Gazi",lat:37.9785,lon:23.7138,in:true,
+  p:P("link","Preis prüfen","","https://www.songkick.com/metro-areas/28976-greece-athens"),d:"Elektronisches Duo aus Wien."},
+ {id:"ev-xmas2",n:"Weihnachtsfeiertage",s:"2026-12-25",e:"2026-12-26",venue:"ganz Athen",in:false,p:P("free",""),d:"Geschäfte, Akropolis und viele Museen geschlossen.",hol:true},
+ {id:"ev-ny",n:"Neujahr",s:"2027-01-01",e:"2027-01-01",venue:"ganz Athen",in:false,p:P("free",""),d:"Feiertag, Akropolis geschlossen.",hol:true},
+ {id:"ev-epiph",n:"Theophanie (Epiphanias)",s:"2027-01-06",e:"2027-01-06",venue:"Piräus & Küste",in:false,p:P("free","Frei"),d:"Feiertag. Priester werfen ein Kreuz ins Meer, Schwimmer tauchen danach.",hol:true}
+];
+
+const DISHES=[
+ {n:"Gemista",g:"Γεμιστά",d:"Mit Reis und Kräutern gefüllte Tomaten und Paprika aus dem Ofen.",veg:true,vegan:true,milk:0,note:"Manchmal mit Feta obendrauf, nachfragen."},
+ {n:"Fasolada",g:"Φασολάδα",d:"Weiße Bohnensuppe mit Tomate und Sellerie, das griechische Nationalgericht für kalte Tage.",veg:true,vegan:true,milk:0},
+ {n:"Fava",g:"Φάβα",d:"Cremiges Püree aus gelben Erbsen mit Zwiebeln, Kapern und Olivenöl.",veg:true,vegan:true,milk:0},
+ {n:"Revithia",g:"Ρεβίθια",d:"Langsam geschmorte Kichererbsen mit Zitrone.",veg:true,vegan:true,milk:0},
+ {n:"Gigantes plaki",g:"Γίγαντες πλακί",d:"Riesenbohnen in Tomatensauce aus dem Ofen.",veg:true,vegan:true,milk:0},
+ {n:"Briam",g:"Μπριάμ",d:"Ofengemüse: Zucchini, Aubergine, Kartoffeln in Olivenöl.",veg:true,vegan:true,milk:0},
+ {n:"Imam bayildi",g:"Ιμάμ μπαϊλντί",d:"Geschmorte Aubergine mit Zwiebeln und Tomate.",veg:true,vegan:true,milk:0},
+ {n:"Dolmadakia",g:"Ντολμαδάκια",d:"Weinblätter mit Reis und Kräutern.",veg:true,vegan:true,milk:0,note:"Oft mit Joghurt serviert: χωρίς γιαούρτι (ohne Joghurt)."},
+ {n:"Horta",g:"Χόρτα",d:"Gekochtes Wildgemüse mit Zitrone und Olivenöl. Gibt es in jeder Taverne.",veg:true,vegan:true,milk:0},
+ {n:"Domatokeftedes",g:"Ντοματοκεφτέδες",d:"Frittierte Tomatenbällchen nach Santorini-Art.",veg:true,vegan:true,milk:0,note:"Meist ohne Käse, sicherheitshalber fragen."},
+ {n:"Koulouri",g:"Κουλούρι",d:"Sesamring vom Straßenstand, das Frühstück der Athener.",veg:true,vegan:true,milk:0},
+ {n:"Halva",g:"Χαλβάς",d:"Süßes aus Tahini, oft mit Mandeln oder Kakao.",veg:true,vegan:true,milk:0},
+ {n:"Loukoumades",g:"Λουκουμάδες",d:"Frittierte Teigbällchen mit Honig und Zimt.",veg:true,vegan:false,milk:1,note:"Teig meist ohne Milch; Toppings mit Schokolade oder Eis enthalten Milch."},
+ {n:"Horiatiki",g:"Χωριάτικη",d:"Bauernsalat mit Tomate, Gurke, Zwiebel, Oliven und Feta.",veg:true,vegan:false,milk:1,note:"χωρίς φέτα bestellen, dann laktosefrei und vegan."},
+ {n:"Spanakopita",g:"Σπανακόπιτα",d:"Blätterteig mit Spinat und Feta.",veg:true,vegan:false,milk:2,note:"In der Fastenzeit gibt es die νηστίσιμη Variante ohne Käse."},
+ {n:"Saganaki",g:"Σαγανάκι",d:"In der Pfanne gebratener Käse (Graviera oder Kefalograviera) mit Zitrone.",veg:true,vegan:false,milk:2,note:"Gereifter Hartkäse ist oft laktosearm, aber nicht frei, je nach Verträglichkeit."},
+ {n:"Tzatziki",g:"Τζατζίκι",d:"Joghurt mit Gurke und Knoblauch.",veg:true,vegan:false,milk:2,note:"Alternative: Melitzanosalata (Auberginencreme), oft ohne Milch."},
+ {n:"Vegetarische Moussaka",g:"Μουσακάς λαχανικών",d:"Gemüse-Moussaka mit Béchamel.",veg:true,vegan:false,milk:2,note:"Veganaki macht sie komplett vegan."},
+ {n:"Galaktoboureko",g:"Γαλακτομπούρεκο",d:"Grießpudding in Filoteig mit Sirup.",veg:true,vegan:false,milk:2},
+ {n:"Freddo Espresso",g:"Φρέντο εσπρέσο",d:"Eiskalt aufgeschäumter Espresso, das Getränk der Stadt, auch im November.",veg:true,vegan:true,milk:0,note:"Freddo Cappuccino hat Milchschaum; mit Hafermilch: με γάλα βρώμης."}
+];
+
+const PHRASES=[
+ ["Καλημέρα","kaliméra","Guten Morgen"],["Ευχαριστώ","efcharistó","Danke"],["Παρακαλώ","parakaló","Bitte"],
+ ["Είμαι χορτοφάγος","íme chortofágos","Ich bin Vegetarier/in"],["Χωρίς κρέας","chorís kréas","Ohne Fleisch"],
+ ["Χωρίς τυρί / φέτα","chorís tirí / féta","Ohne Käse / Feta"],["Έχω δυσανεξία στη λακτόζη","écho dysanexía sti laktósi","Ich habe eine Laktoseintoleranz"],
+ ["Έχει γάλα;","échi gála?","Ist Milch drin?"],["Νηστίσιμο","nistísimo","Fastenspeise (ohne tierische Produkte)"],
+ ["Πόσο κάνει;","póso káni?","Was kostet das?"],["Τον λογαριασμό, παρακαλώ","ton logariasmó, parakaló","Die Rechnung, bitte"],
+ ["Ναι / Όχι","ne / óchi","Ja / Nein (ne heißt ja!)"]
+];
+
+const STATIONS={
+ m1:[["Petralona",37.9686,23.7091],["Thiseio",37.9767,23.7206],["Monastiraki",37.9761,23.7256],["Omonia",37.9841,23.7280],["Victoria",37.9930,23.7302],["Attiki",37.9993,23.7225]],
+ m2:[["Attiki",37.9993,23.7225],["Larissa",37.9920,23.7212],["Metaxourgeio",37.9862,23.7212],["Omonia",37.9841,23.7280],["Panepistimio",37.9804,23.7330],["Syntagma",37.9755,23.7350],["Akropoli",37.9688,23.7297],["Syngrou-Fix",37.9641,23.7266],["Neos Kosmos",37.9576,23.7284]],
+ m3:[["Kerameikos",37.9786,23.7115],["Monastiraki",37.9761,23.7256],["Syntagma",37.9755,23.7350],["Evangelismos",37.9764,23.7470],["Megaro Mousikis",37.9791,23.7527],["Ambelokipi",37.9872,23.7573]]
+};
+
+
+/* ===================== STATE ===================== */
+const K="athen-kompass-v1";
+const DEF={start:"2026-11-05",end:"2026-11-09",rain:false,veg:true,vegan:false,lf:true,plan:{},cats:[],q:"",mode:"walk",routeDay:"all",tab:"entdecken",sample:true,view:"list"};
+let S=Object.assign({},DEF);
+try{const raw=localStorage.getItem(K);if(raw)S=Object.assign({},DEF,JSON.parse(raw));}catch(e){}
+function save(){try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}}
+
+/* ===================== HELPERS ===================== */
+const $=s=>document.querySelector(s);
+const WD=["So","Mo","Di","Mi","Do","Fr","Sa"];
+const WDL=["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
+const MON=["Jan","Feb","März","Apr","Mai","Juni","Juli","Aug","Sep","Okt","Nov","Dez"];
+function d(s){const [y,m,dd]=s.split("-").map(Number);return new Date(Date.UTC(y,m-1,dd,12));}
+function iso(dt){return dt.toISOString().slice(0,10);}
+function days(){let a=d(S.start),b=d(S.end);if(b<a)[a,b]=[b,a];const out=[];for(let x=new Date(a);x<=b&&out.length<62;x.setUTCDate(x.getUTCDate()+1))out.push(iso(x));return out;}
+function fmt(s,long){const x=d(s);return (long?WDL:WD)[x.getUTCDay()]+" "+x.getUTCDate()+". "+MON[x.getUTCMonth()];}
+function months(){return [...new Set(days().map(s=>d(s).getUTCMonth()+1))];}
+function esc(s){return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function ic(n,cls){return `<svg class="i${cls?" "+cls:""}" aria-hidden="true"><use href="#i-${n}"/></svg>`;}
+function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove("show"),1800);}
+function byId(id){return ITEMS.find(i=>i.id===id)||EVENTS.find(e=>e.id===id);}
+function hasGeo(x){return x&&typeof x.lat==="number"&&typeof x.lon==="number";}
+function hav(a,b){const R=6371,toR=Math.PI/180,dLa=(b.lat-a.lat)*toR,dLo=(b.lon-a.lon)*toR;const h=Math.sin(dLa/2)**2+Math.cos(a.lat*toR)*Math.cos(b.lat*toR)*Math.sin(dLo/2)**2;return 2*R*Math.asin(Math.sqrt(h));}
+function mapsLink(x){return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(hasGeo(x)?x.lat+","+x.lon:(x.n+" Athens"));}
+function inRange(s,e){const ds=days();return !(e<ds[0]||s>ds[ds.length-1]);}
+function catOf(it){return CATS[it.c]||CATS.event;}
+function tile(it,small){const c=catOf(it);return `<div class="tile${small?" s":""}" style="--cc:var(${it.hol?"--warn":c.c})">${ic(it.hol?"flag":c.i)}</div>`;}
+function todayIso(){const n=new Date();return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}-${String(n.getDate()).padStart(2,"0")}`;}
+
+function freeDays(){const out={};days().forEach(s=>{const x=d(s),m=x.getUTCMonth()+1,dom=x.getUTCDate();
+  if(x.getUTCDay()===0&&(m>=11||m<=3)){const nth=Math.ceil(dom/7);if(nth===1||nth===3)out[s]="Freier Eintritt in allen staatlichen Stätten (u. a. Akropolis, Agora)";}
+  const md=s.slice(5);if(md==="10-28")out[s]="Freier Eintritt: staatliche Stätten & Akropolismuseum";if(md==="03-06")out[s]="Freier Eintritt (Melina-Merkouri-Tag)";});return out;}
+function fastingActive(){return days().some(s=>{const md=s.slice(5);return md>="11-15"&&md<="12-24";});}
+
+/* ===================== BADGES ===================== */
+function priceBadge(p){if(!p||(!p.t&&p.k!=="link"))return"";
+  if(p.k==="fix")return `<span class="b price" title="${esc(p.n)}">${esc(p.t)}</span>`;
+  if(p.k==="free")return p.t?`<span class="b free">${esc(p.t)}</span>`:"";
+  if(p.k==="est")return `<span class="b price est" title="Schätzung${p.n?": "+esc(p.n):""}">${esc(p.t)} · Schätzung</span>`;
+  return `<a class="b price est" href="${esc(p.u||"#")}" target="_blank" rel="noopener">Preis prüfen ↗</a>`;}
+function dietBadges(it){if(!it.diet)return"";const o=[];
+  if(it.diet.vegan==="all")o.push('<span class="b veg">100 % vegan</span>');else if(it.diet.veg==="all")o.push('<span class="b veg">vegetarisch</span>');else o.push('<span class="b veg">veg. Optionen</span>');
+  if(it.diet.vegan==="opts")o.push('<span class="b veg">vegane Optionen</span>');
+  if(it.diet.lf==="easy")o.push('<span class="b veg">laktosefrei leicht</span>');else o.push('<span class="b milk">Laktose: nachfragen</span>');return o.join("");}
+function inBadge(it){if(it.in===true)return '<span class="b in">drinnen</span>';if(it.in==="mix")return '<span class="b in">teils drinnen</span>';return '<span class="b">draußen</span>';}
+
+/* ===================== MAP ===================== */
+const B={la0:37.954,la1:37.996,lo0:23.700,lo1:23.762},MW=600,MH=Math.round(MW*(B.la1-B.la0)/((B.lo1-B.lo0)*Math.cos(37.975*Math.PI/180)));
+function prj(lat,lon){return [(lon-B.lo0)/(B.lo1-B.lo0)*MW,(B.la1-lat)/(B.la1-B.la0)*MH];}
+function onMap(x){return hasGeo(x)&&x.lat>=B.la0&&x.lat<=B.la1&&x.lon>=B.lo0&&x.lon<=B.lo1;}
+function baseMap(){
+  const blob=(lat,lon,rx,ry,cls,rot)=>{const [x,y]=prj(lat,lon);return `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${rx}" ry="${ry}" transform="rotate(${rot||0} ${x.toFixed(1)} ${y.toFixed(1)})" fill="var(${cls})"/>`;};
+  let g=`<rect width="${MW}" height="${MH}" fill="var(--mapbg)"/>`;
+  for(let x=0;x<=MW;x+=50)g+=`<line x1="${x}" y1="0" x2="${x}" y2="${MH}" stroke="var(--mapline)" stroke-width="1"/>`;
+  for(let y=0;y<=MH;y+=50)g+=`<line x1="0" y1="${y}" x2="${MW}" y2="${y}" stroke="var(--mapline)" stroke-width="1"/>`;
+  g+=blob(37.9727,23.7380,34,46,"--park",-10)+blob(37.9690,23.7195,42,30,"--park",20)+blob(37.9818,23.7432,22,18,"--park",0)+blob(37.9875,23.7393,14,11,"--park",0);
+  g+=blob(37.9715,23.7257,26,12,"--hill",-8)+blob(37.9818,23.7432,9,7,"--hill",0);
+  const [ax,ay]=prj(37.9715,23.7257);g+=`<text x="${ax}" y="${ay+4}" text-anchor="middle" font-family="GFS Didot,Georgia,serif" font-size="13" fill="var(--muted)">Akropolis</text>`;
+  const [lx,ly]=prj(37.9818,23.7432);g+=`<text x="${lx}" y="${ly-12}" text-anchor="middle" font-size="10" fill="var(--muted)" font-family="Commissioner,sans-serif">Lykabettus</text>`;
+  const tr=[[37.9740,23.7352],[37.9705,23.7345],[37.9668,23.7318],[37.9600,23.7260],[37.9540,23.7210]].map(p=>prj(...p).map(v=>v.toFixed(1)).join(",")).join(" ");
+  g+=`<polyline points="${tr}" fill="none" stroke="var(--tram)" stroke-width="2.5" stroke-dasharray="5 4" opacity=".8"/>`;
+  for(const [k,col] of [["m1","--m1"],["m2","--m2"],["m3","--m3"]]){const pts=STATIONS[k].map(s=>prj(s[1],s[2]).map(v=>v.toFixed(1)).join(",")).join(" ");g+=`<polyline points="${pts}" fill="none" stroke="var(${col})" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>`;}
+  const lab=new Set(["Syntagma","Monastiraki","Omonia","Akropoli","Thiseio","Evangelismos","Kerameikos","Panepistimio","Larissa","Victoria","Syngrou-Fix","Megaro Mousikis","Petralona"]),seen=new Set();
+  for(const k of ["m1","m2","m3"])for(const s of STATIONS[k]){if(seen.has(s[0]))continue;seen.add(s[0]);const [x,y]=prj(s[1],s[2]);
+    g+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.2"/>`;
+    if(lab.has(s[0]))g+=`<text x="${(x+6).toFixed(1)}" y="${(y-5).toFixed(1)}" font-size="9" fill="var(--muted)" font-family="Commissioner,sans-serif">${s[0]}</text>`;}
+  return g;}
+function mapSVG(points,{route=null,hl=null,dimIds=new Set()}={}){
+  let g=baseMap();
+  if(route&&route.length>1){const pts=route.filter(onMap).map(r=>prj(r.lat,r.lon).map(v=>v.toFixed(1)).join(",")).join(" ");
+    g+=`<polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="3.5" stroke-dasharray="1 7" stroke-linecap="round"/>`;}
+  points.filter(onMap).forEach(it=>{const [x,y]=prj(it.lat,it.lon);const col=`var(${catOf(it).c})`;
+    const cls=["marker",dimIds.has(it.id)?"dim":"",hl===it.id?"hl":""].join(" ");
+    const num=it._no?`<text x="${x.toFixed(1)}" y="${(y+3.5).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="800" fill="var(--bg)" font-family="Commissioner,sans-serif">${it._no}</text>`:"";
+    g+=`<g class="${cls}" data-id="${it.id}" tabindex="0" role="button" aria-label="${esc(it.n)}"><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${it._no?10:hl===it.id?9:7}" fill="${col}"/>${num}<title>${esc(it.n)}</title></g>`;});
+  return `<svg viewBox="0 0 ${MW} ${MH}" role="img" aria-label="Schematische Karte des Athener Zentrums"><defs><clipPath id="clipm"><rect width="${MW}" height="${MH}"/></clipPath></defs><g clip-path="url(#clipm)">${g}</g></svg>`;}
+function mapCaption(){return `<div class="mapcap"><span><i style="background:var(--m1)"></i>M1</span><span><i style="background:var(--m2)"></i>M2</span><span><i style="background:var(--m3)"></i>M3</span><span><i style="background:var(--tram)"></i>Tram</span><span>Schematisch. Ziele außerhalb des Zentrums nur in der Liste.</span></div>`;}
+
+/* ===================== PLAN HELPERS ===================== */
+function inPlan(id){return !!S.plan[id];}
+function togglePlan(id,day){if(S.plan[id]){delete S.plan[id];toast("Aus dem Plan entfernt");}else{S.plan[id]={day:day||"",done:false};toast("Zum Plan hinzugefügt");}S.sample=false;save();renderAll();}
+function planBtn(id,day){return inPlan(id)?`<button class="btn added" data-plan="${id}">${ic("check")}Im Plan</button>`:`<button class="btn primary" data-plan="${id}"${day?` data-day="${day}"`:""}>${ic("plus")}Zum Plan</button>`;}
+
+/* ===================== ENTDECKEN ===================== */
+let hlId=null;
+function filteredItems(){const q=S.q.trim().toLowerCase();return ITEMS.filter(it=>{
+  if(S.cats.length&&!S.cats.includes(it.c))return false;
+  if(q&&!(it.n+" "+it.a+" "+it.d).toLowerCase().includes(q))return false;
+  if((it.c==="food"||it.c==="cafe")&&it.diet&&S.vegan&&!it.diet.vegan)return false;
+  return true;});}
+function isDim(it){if(S.rain&&it.in===false)return true;if(it.season&&!months().some(m=>it.season.includes(m)))return true;return false;}
+function itemCard(it){const cat=catOf(it);const dim=isDim(it);
+  const seasonOff=it.season&&!months().some(m=>it.season.includes(m));
+  const closedDays=(it.closed||[]).map(x=>WDL[x]).join(", ");
+  const alt=S.rain&&it.in===false&&it.alt?byId(it.alt):null;
+  const fd=freeDays();const freeHit=it.eu25?Object.keys(fd).filter(k=>fd[k].includes("staatliche")).map(k=>fmt(k)).join(", "):"";
+  const dur=it.dur?(it.dur>=60?(Math.round(it.dur/30)/2).toString().replace(".",",")+" h":it.dur+" Min."):"";
+  return `<article class="card${dim?" dim":""}${hlId===it.id?" hl":""}" id="card-${it.id}" style="--cc:var(${cat.c})">
+   <div class="card-h">${tile(it)}<div class="t"><div class="cat">${cat.n}</div><h3>${esc(it.n)}</h3>
+   <div class="meta"><span>${esc(it.a)}</span>${dur?`<span>ca. ${dur}</span>`:""}</div></div></div>
+   <div class="badges">${priceBadge(it.p)}${inBadge(it)}${it.eu25?'<span class="b free">EU unter 25: frei</span>':""}${dietBadges(it)}${seasonOff?'<span class="b warn">im Zeitraum geschlossen</span>':""}${closedDays?`<span class="b warn">${closedDays} geschlossen</span>`:""}</div>
+   <p>${esc(it.d)}</p>
+   ${it.p&&it.p.n?`<div class="tip">${esc(it.p.n)}</div>`:""}
+   ${it.tip?`<div class="tip"><b>Tipp:</b> ${esc(it.tip)}</div>`:""}
+   ${freeHit?`<div class="tip"><b>Gratis in deinem Zeitraum:</b> ${freeHit}</div>`:""}
+   ${alt?`<div class="altline">${ic("umbrella")}<span>Bei Regen besser: <button data-goto="${alt.id}">${esc(alt.n)}</button>${alt.p&&alt.p.t?" · "+esc(alt.p.t):""}</span></div>`:""}
+   <div class="actions">${planBtn(it.id)}<a class="btn" href="${mapsLink(it)}" target="_blank" rel="noopener">${ic("pin")}Karte</a>${it.url?`<a class="btn ghost" href="${esc(it.url)}" target="_blank" rel="noopener">${ic("ext")}Website</a>`:""}</div>
+  </article>`;}
+function heroHtml(){const ds=days();const t=todayIso();const h=new Date().getHours();
+  const greet=h<12?"Καλημέρα":h<18?"Γεια σου":"Καλησπέρα";
+  let head,sub;const until=Math.round((d(ds[0])-d(t))/864e5);
+  if(t<ds[0]){head=until===1?"Morgen geht’s nach Athen":`Noch ${until} Tage bis Athen`;sub=`${fmt(ds[0],true)} – ${fmt(ds[ds.length-1],true)}`;}
+  else if(t<=ds[ds.length-1]){const n=ds.indexOf(t)+1;head=`Tag ${n} von ${ds.length} in Athen`;sub=fmt(t,true);}
+  else{head="Deine Athen-Reise";sub=`${fmt(ds[0])} – ${fmt(ds[ds.length-1])} · Zeitraum oben anpassen`;}
+  const nFree=Object.keys(freeDays()).length,nEv=EVENTS.filter(e=>!e.hol&&inRange(e.s,e.e)).length,nPlan=Object.keys(S.plan).filter(byId).length;
+  return `<div class="hero"><svg class="cols" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 22h18M6 18v-7M10 18v-7M14 18v-7M18 18v-7M12 2l8 5H4z"/></svg>
+   <div><div class="greet">${greet}</div><h2>${head}</h2><div class="sub">${sub}</div></div>
+   <div class="stats"><button class="stat" data-tab="events"><b>${nEv}</b><span>Events</span></button><button class="stat" data-tab="events"><b>${nFree}</b><span>Gratis-Tage</span></button><button class="stat" data-tab="plan"><b>${nPlan}</b><span>im Plan</span></button></div></div>`;}
+function renderDiscover(){const el=$("#p-entdecken");const list=filteredItems();
+  const sorted=[...list].sort((a,b)=>(isDim(a)-isDim(b)));
+  const chips=Object.entries(CATS).filter(([k])=>k!=="event").map(([k,v])=>`<button class="chip" data-cat="${k}" aria-pressed="${S.cats.includes(k)}" style="--cc:var(${v.c})"><span style="color:var(${v.c})">${ic(v.i)}</span>${v.n}</button>`).join("");
+  const dimIds=new Set(list.filter(isDim).map(i=>i.id));
+  const sel=hlId&&list.find(i=>i.id===hlId);
+  el.innerHTML=`${heroHtml()}
+   ${S.rain?`<div class="notice rain">${ic("umbrella")}<span><b>Regentag:</b> Drinnen-Ziele stehen oben. Bei Outdoor-Zielen siehst du eine Alternative. Akropolis und Areopag sind bei Nässe wegen der glatten Marmorflächen unangenehm.</span></div>`:""}
+   <div class="searchbox">${ic("search")}<input id="q" type="search" placeholder="Suchen, z. B. Plaka, vegan, Museum" value="${esc(S.q)}" aria-label="Suchen"></div>
+   <div class="chips" role="group" aria-label="Kategorien"><button class="chip" data-cat="" aria-pressed="${S.cats.length===0}">Alle</button>${chips}</div>
+   <div class="row" style="justify-content:space-between"><small style="color:var(--muted)">${list.length} Orte</small><div class="seg" role="group" aria-label="Ansicht"><button data-view="list" aria-pressed="${S.view!=="map"}">${ic("list")}Liste</button><button data-view="map" aria-pressed="${S.view==="map"}">${ic("map")}Karte</button></div></div>
+   ${S.view==="map"?`<div class="mapbox">${mapSVG(list,{hl:hlId,dimIds})}${mapCaption()}</div>${sel?itemCard(sel):`<div class="tip" style="text-align:center">Tippe auf einen Punkt für Details.</div>`}`
+   :`<div class="list">${sorted.length?sorted.map(itemCard).join(""):`<div class="empty">${ic("search")}Keine Treffer. Filter zurücksetzen?</div>`}</div>`}`;
+  const q=$("#q");q.addEventListener("input",()=>{S.q=q.value;save();const pos=q.selectionStart;renderDiscover();const n=$("#q");n.focus();n.setSelectionRange(pos,pos);});}
+
+/* ===================== EVENTS ===================== */
+function renderEvents(){const el=$("#p-events");const ds=days();const fd=freeDays();const byDay={};
+  ds.forEach(x=>byDay[x]={ev:[],flags:[]});
+  EVENTS.filter(e=>inRange(e.s,e.e)&&e.s>=ds[0]).forEach(e=>byDay[e.s].ev.push(e));
+  ds.forEach(x=>{const wd=d(x).getUTCDay();
+    if(fd[x])byDay[x].flags.push(["free",fd[x]]);
+    if(wd===0)byDay[x].flags.push(["info","Viele Läden zu · Flohmarkt Monastiraki · Wachablösung 11:00 mit Kapelle"]);
+    if(wd===6)byDay[x].flags.push(["info","Metro M2 & M3 und Tram fahren die ganze Nacht"]);
+    if(x.slice(5)==="10-25")byDay[x].flags.push(["info","Zeitumstellung: Uhr eine Stunde zurück"]);
+    if(x.slice(5)==="11-01")byDay[x].flags.push(["info","Ab heute Winteröffnungszeiten (Akropolis 8–17 Uhr)"]);
+    if(x.slice(5)==="11-15")byDay[x].flags.push(["info","Beginn der Weihnachtsfastenzeit: mehr νηστίσιμα (vegane) Gerichte"]);});
+  let html=`<div class="ptitle"><h2>Events &amp; Termine</h2><small>${fmt(ds[0])} – ${fmt(ds[ds.length-1])}</small></div>
+   <p class="lede">Feiertage, Gratis-Tage und Veranstaltungen in deinem Zeitraum. Konzertdaten stammen von Songkick; Preise sind dort verlinkt.</p>`;
+  if(S.rain)html+=`<div class="notice rain">${ic("umbrella")}<span>Events unter freiem Himmel sind abgeschwächt dargestellt.</span></div>`;
+  const ongoing=EVENTS.filter(e=>inRange(e.s,e.e)&&e.s<ds[0]);
+  if(ongoing.length)html+=`<section class="daygroup"><div class="dayhead"><span class="w">Läuft bereits</span></div>${ongoing.map(e=>eventCard(e,ds[0])).join("")}</section>`;
+  let any=ongoing.length>0;
+  ds.forEach(x=>{const g=byDay[x];if(!g.ev.length&&!g.flags.length)return;any=true;const dt=d(x);
+    html+=`<section class="daygroup"><div class="dayhead"><div class="datebadge"><b>${dt.getUTCDate()}</b><span>${MON[dt.getUTCMonth()]}</span></div><span class="w">${WDL[dt.getUTCDay()]}</span></div>
+     ${g.flags.length?`<div class="flags">${g.flags.map(f=>`<div class="flagrow"><span class="flag ${f[0]}">${f[0]==="free"?"Gratis":"Info"}</span><span>${esc(f[1])}</span></div>`).join("")}</div>`:""}
+     ${g.ev.map(e=>eventCard(e,x)).join("")}</section>`;});
+  if(!any)html+=`<div class="empty">${ic("calendar")}In diesem Zeitraum habe ich keine besonderen Termine gefunden.</div>`;
+  html+=`<div class="notice">${ic("search")}<span><b>Mehr finden:</b> <a href="https://www.thisisathens.org/events" target="_blank" rel="noopener">This is Athens</a> · <a href="https://www.songkick.com/metro-areas/28976-greece-athens" target="_blank" rel="noopener">Songkick</a> · <a href="https://www.more.com/gr-en/" target="_blank" rel="noopener">more.com</a> · <a href="https://www.snfcc.org/en/events" target="_blank" rel="noopener">SNFCC</a> · <a href="https://www.onassis.org/whats-on" target="_blank" rel="noopener">Onassis</a></span></div>`;
+  el.innerHTML=html;}
+function eventCard(e,dayIso){const dim=S.rain&&e.in===false;const multi=e.s!==e.e?`${fmt(e.s)} – ${fmt(e.e)}`:fmt(e.s);const cc=e.hol?"--warn":"--c-event";
+  return `<article class="card${dim?" dim":""}" id="card-${e.id}" style="--cc:var(${cc})"><div class="card-h">${tile(e)}<div class="t"><div class="cat">${e.hol?"Feiertag / Gedenktag":"Event"}</div><h3>${esc(e.n)}</h3><div class="meta"><span>${multi}</span><span>${esc(e.venue)}</span></div></div></div>
+   <div class="badges">${priceBadge(e.p)}${inBadge(e)}</div><p>${esc(e.d)}</p>
+   <div class="actions">${e.hol&&!hasGeo(e)?"":planBtn(e.id,dayIso>=e.s&&dayIso<=e.e?dayIso:e.s)}<a class="btn" href="${mapsLink({n:e.venue,lat:e.lat,lon:e.lon})}" target="_blank" rel="noopener">${ic("pin")}Ort</a>${e.p&&e.p.u?`<a class="btn ghost" href="${esc(e.p.u)}" target="_blank" rel="noopener">${ic("ext")}Infos</a>`:""}</div></article>`;}
+
+/* ===================== ESSEN ===================== */
+function renderFood(){const el=$("#p-essen");
+  let dishes=DISHES.filter(x=>(!S.veg||x.veg)&&(!S.vegan||x.vegan));
+  dishes=[...dishes].sort((a,b)=>(S.lf?a.milk-b.milk:0));
+  const milkBadge=x=>x.milk===0?'<span class="b veg">ohne Milch</span>':x.milk===1?'<span class="b milk">Milch je nach Variante</span>':'<span class="b milk">enthält Milchprodukte</span>';
+  const places=ITEMS.filter(i=>(i.c==="food"||i.c==="cafe")&&(!S.vegan||i.diet?.vegan));
+  el.innerHTML=`<div class="ptitle"><h2>Essen</h2><small>${[S.vegan?"vegan":S.veg?"vegetarisch":"",S.lf?"laktosefrei":""].filter(Boolean).join(" · ")}</small></div>
+   <p class="lede">Die griechische Küche hat viele Gemüse- und Hülsenfruchtgerichte, die von Haus aus vegan sind. Das Wort dafür: <b style="font-family:var(--f-display);font-size:1.12em;color:var(--ink)">νηστίσιμο</b> (nistísimo), Fastenessen ohne Fleisch, Milch und Ei.${fastingActive()?" In deinem Zeitraum beginnt am 15. November die Weihnachtsfastenzeit, dann gibt es besonders viel davon.":""}</p>
+   ${S.lf?`<div class="notice warn">${ic("alert")}<span><b>Laktose:</b> Feta, Joghurt und Béchamel stecken in vielen Klassikern. Gerichte ohne Milch stehen oben. Satz zum Zeigen: <b>Έχω δυσανεξία στη λακτόζη</b>.</span></div>`:""}
+   <section class="block"><h2>Gerichte, die du probieren solltest</h2><div class="grid">${dishes.map(x=>`<article class="card" style="--cc:var(--c-food)"><div class="card-h"><div class="tile s" style="--cc:var(${x.vegan?"--c-food":"--c-view"})">${ic("leaf")}</div><div class="t"><h3>${esc(x.n)}</h3><div class="meta" style="font-family:var(--f-display);font-size:.98rem">${x.g}</div></div></div><div class="badges">${x.vegan?'<span class="b veg">vegan</span>':'<span class="b veg">vegetarisch</span>'}${milkBadge(x)}</div><p>${esc(x.d)}</p>${x.note?`<div class="tip"><b>Tipp:</b> ${esc(x.note)}</div>`:""}</article>`).join("")}</div></section>
+   <section class="block"><h2>Wo essen</h2><div class="list">${places.map(itemCard).join("")}</div></section>
+   <section class="block"><h2>Sprachhilfe fürs Bestellen</h2><div class="phr">${PHRASES.map(p=>`<div><span class="g">${p[0]}</span><span class="l">${p[1]}</span><span class="de">${p[2]}</span></div>`).join("")}</div></section>`;}
+
+/* ===================== ROUTING ===================== */
+const ALLST=[];for(const k of ["m1","m2","m3"])STATIONS[k].forEach(s=>{let f=ALLST.find(a=>a.n===s[0]);if(!f){f={n:s[0],lat:s[1],lon:s[2],lines:[]};ALLST.push(f);}f.lines.push(k);});
+function nearestSt(p){let best=null,bd=1e9;for(const s of ALLST){const dd=hav(p,s);if(dd<bd){bd=dd;best=s;}}return [best,bd];}
+function legCost(a,b,mode){const km=hav(a,b);
+  if(mode==="walk"){const w=km*1.3;return {km:w,min:w/4.5*60,how:"zu Fuß"};}
+  if(mode==="car"){const c=km*1.4;const far=km>25;return {km:c,min:c/(far?70:18)*60+(far?10:8),how:far?"Auto über Autobahn":"Auto/Taxi, inkl. Parkplatzsuche"};}
+  const walk={km:km*1.3,min:km*1.3/4.5*60,how:"zu Fuß"};
+  if(km<1.0)return walk;
+  if(km>25)return {km:km*1.3,min:km/55*60+30,how:"Bus/Zug/Fähre (Fernverbindung)"};
+  const [sa,da]=nearestSt(a),[sb,db]=nearestSt(b);
+  if(sa.n===sb.n||da>1.6||db>1.6){const bus={km:km*1.3,min:km*1.3/15*60+8,how:"Bus/Tram (Linie in Google Maps prüfen)"};return bus.min<walk.min?bus:walk;}
+  const shared=sa.lines.some(l=>sb.lines.includes(l));
+  const ride=hav(sa,sb)*1.2/30*60+4+(shared?0:5);
+  const t={km:km*1.3,min:(da+db)*1.3/4.5*60+ride,how:`Metro ${sa.n} → ${sb.n}${shared?"":" (1× umsteigen)"}`};
+  return t.min<walk.min?t:walk;}
+function optimize(pts,startId){if(pts.length<3)return pts;
+  const start=pts.find(p=>p.id===startId)||pts[0];const rest=pts.filter(p=>p!==start);const order=[start];
+  while(rest.length){const last=order[order.length-1];let bi=0,bd=1e9;rest.forEach((p,i)=>{const dd=hav(last,p);if(dd<bd){bd=dd;bi=i;}});order.push(rest.splice(bi,1)[0]);}
+  const len=o=>o.reduce((s,p,i)=>i?s+hav(o[i-1],p):0,0);let improved=true,guard=0;
+  while(improved&&guard++<60){improved=false;for(let i=1;i<order.length-1;i++)for(let k=i+1;k<order.length;k++){const n=[...order.slice(0,i),...order.slice(i,k+1).reverse(),...order.slice(k+1)];if(len(n)+1e-9<len(order)){order.splice(0,order.length,...n);improved=true;}}}
+  return order;}
+function segDist(p,a,b){const kx=111.32*Math.cos(p.lat*Math.PI/180),ky=110.57;const ax=a.lon*kx,ay=a.lat*ky,bx=b.lon*kx,by=b.lat*ky,px=p.lon*kx,py=p.lat*ky;const dx=bx-ax,dy=by-ay;const L=dx*dx+dy*dy;let t=L?((px-ax)*dx+(py-ay)*dy)/L:0;t=Math.max(0,Math.min(1,t));return Math.hypot(px-(ax+t*dx),py-(ay+t*dy));}
+function onTheWay(order,mode){const lim=mode==="walk"?0.25:mode==="car"?0.8:0.4;const ids=new Set(order.map(o=>o.id));const out=[];
+  ITEMS.filter(i=>hasGeo(i)&&!ids.has(i.id)&&i.c!=="trip").forEach(i=>{let best=1e9;for(let k=1;k<order.length;k++)best=Math.min(best,segDist(i,order[k-1],order[k]));if(order.length===1)best=hav(i,order[0]);if(best<=lim&&!(S.rain&&i.in===false))out.push([i,best]);});
+  return out.sort((a,b)=>a[1]-b[1]).slice(0,8);}
+function gmapsRoute(order,mode){if(order.length<2)return null;const tm={walk:"walking",car:"driving",transit:"transit"}[mode];const ll=p=>p.lat+","+p.lon;
+  let u=`https://www.google.com/maps/dir/?api=1&origin=${ll(order[0])}&destination=${ll(order[order.length-1])}&travelmode=${tm}`;
+  if(mode!=="transit"&&order.length>2)u+="&waypoints="+order.slice(1,-1).slice(0,9).map(ll).join("%7C");return u;}
+function legLink(a,b,mode){const tm={walk:"walking",car:"driving",transit:"transit"}[mode];return `https://www.google.com/maps/dir/?api=1&origin=${a.lat},${a.lon}&destination=${b.lat},${b.lon}&travelmode=${tm}`;}
+const kmf=v=>v.toFixed(1).replace(".",",");
+
+/* ===================== PLAN ===================== */
+function renderPlan(){const el=$("#p-plan");const ds=days();const ids=Object.keys(S.plan).filter(byId);
+  const pc=$("#planCount");pc.textContent=ids.length;pc.dataset.n=ids.length;
+  if(!ids.length){el.innerHTML=`<div class="ptitle"><h2>Mein Plan</h2></div><div class="empty">${ic("route")}<span>Dein Plan ist leer. Füge unter <b>Entdecken</b> oder <b>Events</b> Ziele hinzu, dann berechne ich hier eine sinnvolle Route.</span><button class="btn primary" data-tab="entdecken">${ic("compass")}Ziele entdecken</button></div>`;return;}
+  const dayOpts=sel=>`<option value="">Ohne Tag</option>`+ds.map(x=>`<option value="${x}"${sel===x?" selected":""}>${fmt(x)}</option>`).join("");
+  const groups={};ids.forEach(id=>{const dd=S.plan[id].day&&ds.includes(S.plan[id].day)?S.plan[id].day:"";(groups[dd]=groups[dd]||[]).push(id);});
+  const order=[...ds.filter(x=>groups[x]),...(groups[""]?[""]:[])];
+  const fd=freeDays();
+  const warnFor=(it,day)=>{if(!day)return"";const wd=d(day).getUTCDay();const w=[];
+    if(it.closed&&it.closed.includes(wd))w.push(`${WDL[wd]} geschlossen`);
+    if(it.id==="nam"&&wd===2)w.push("Dienstag erst ab 13:00");
+    if(it.eu25&&fd[day])w.push("heute gratis");
+    if(it.c==="view"&&it.in===false&&d(day).getUTCMonth()>=10)w.push("Sonnenuntergang ca. 17:15");
+    if(day.slice(5)==="11-08"&&(it.id==="stadion"||it.c==="trip"))w.push("Marathon: Sperrungen");
+    if(day.slice(5)==="10-28"&&["wache","garten","olympieion"].includes(it.id))w.push("Parade: Sperrungen ab 9 Uhr");
+    if(it.e&&it.s&&(day<it.s||day>it.e))w.push("Event findet an diesem Tag nicht statt");
+    return w.map(x=>`<span class="b ${x==="heute gratis"?"free":"warn"}">${x}</span>`).join("");};
+  let html=`<div class="ptitle"><h2>Mein Plan</h2><small>${ids.length} Ziele · ${ids.filter(i=>S.plan[i].done).length} erledigt</small></div>
+   ${S.sample?`<div class="notice">${ic("alert")}<span><b>Beispielplan</b> zum Ausprobieren. Entferne Einträge oder füge eigene hinzu, dann gehört er dir.</span></div>`:""}`;
+  order.forEach(dd=>{html+=`<div class="planday"><h3>${dd?fmt(dd,true):"Noch ohne Tag"}</h3>${groups[dd].map(id=>{const it=byId(id);const st=S.plan[id];const cat=catOf(it);
+    return `<div class="pitem${st.done?" done":""}"><input class="check" type="checkbox" id="done-${id}" data-done="${id}"${st.done?" checked":""} aria-label="Erledigt: ${esc(it.n)}">${tile(it,true)}<div class="nm">${esc(it.n)}<small>${cat.n}${it.a?" · "+esc(it.a):it.venue?" · "+esc(it.venue):""}${!hasGeo(it)?" · ohne Standort":""}</small></div><select class="sel" id="day-${id}" data-day="${id}" aria-label="Tag wählen">${dayOpts(dd)}</select><button class="iconbtn" data-plan="${id}" aria-label="Entfernen" title="Entfernen">${ic("trash")}</button><div class="badges">${priceBadge(it.p)}${warnFor(it,dd)}</div></div>`;}).join("")}</div>`;});
+  const routeDays=["all",...order.filter(x=>x)];if(!routeDays.includes(S.routeDay))S.routeDay="all";
+  let pts=ids.map(byId).filter(hasGeo).filter(it=>S.routeDay==="all"||S.plan[it.id].day===S.routeDay);
+  if(S.mode==="walk")pts=pts.filter(p=>p.c!=="trip");
+  const startSel=S.routeStart&&pts.find(p=>p.id===S.routeStart)?S.routeStart:(pts[0]&&pts[0].id);
+  const ordered=optimize(pts,startSel);ordered.forEach((p,i)=>p._no=i+1);
+  let tot={km:0,min:0},legs="";
+  for(let i=1;i<ordered.length;i++){const c=legCost(ordered[i-1],ordered[i],S.mode);tot.km+=c.km;tot.min+=c.min;
+    legs+=`<div class="leg"><div class="no">${i+1}</div><div><b>${esc(ordered[i].n)}</b><div class="how">${esc(c.how)} · <a href="${legLink(ordered[i-1],ordered[i],S.mode)}" target="_blank" rel="noopener">Weg ↗</a></div></div><div class="tm">${kmf(c.km)} km<br>${Math.round(c.min)} Min.</div></div>`;}
+  const stay=ordered.reduce((s,p)=>s+(p.dur||45),0);
+  const ow=ordered.length?onTheWay(ordered,S.mode):[];const gl=gmapsRoute(ordered,S.mode);
+  html+=`<div class="routebox"><h2>${ic("route")}Route berechnen</h2>
+   <div class="row"><select id="routeDay" class="sel" aria-label="Tag für die Route">${routeDays.map(x=>`<option value="${x}"${S.routeDay===x?" selected":""}>${x==="all"?"Alle Ziele im Plan":fmt(x,true)}</option>`).join("")}</select>
+   <div class="seg" role="group" aria-label="Verkehrsmittel">${[["walk","Zu Fuß"],["transit","Öffis"],["car","Auto"]].map(m=>`<button data-mode="${m[0]}" aria-pressed="${S.mode===m[0]}">${m[1]}</button>`).join("")}</div></div>
+   ${ordered.length>1?`<div class="row"><label for="routeStart" style="font-size:.82rem;color:var(--muted);font-weight:700">Start</label><select id="routeStart" class="sel">${pts.map(p=>`<option value="${p.id}"${p.id===startSel?" selected":""}>${esc(p.n)}</option>`).join("")}</select></div>`:""}
+   ${S.mode==="walk"&&ids.map(byId).some(p=>p.c==="trip")?`<div class="tip">Tagesausflüge sind zu Fuß ausgeblendet, wähle Öffis oder Auto.</div>`:""}
+   ${ordered.length<2?`<div class="empty">${ic("pin")}Für eine Route brauchst du mindestens zwei Ziele mit Standort${S.routeDay!=="all"?" an diesem Tag":""}.</div>`:`
+   <div class="sumgrid"><div><b>${kmf(tot.km)} km</b><span>Wege ≈</span></div><div><b>${Math.round(tot.min)} Min.</b><span>unterwegs ≈</span></div><div><b>${kmf(stay/60)} h</b><span>Aufenthalt ≈</span></div><div><b>${kmf((tot.min+stay)/60)} h</b><span>gesamt ≈</span></div></div>
+   ${(tot.min+stay)>600?`<div class="notice warn">${ic("alert")}<span><b>Viel für einen Tag:</b> über 10 Stunden. Verteile die Ziele auf mehrere Tage.</span></div>`:""}
+   <div class="mapbox">${mapSVG(ordered,{route:ordered})}${mapCaption()}</div>
+   <div class="legs"><div class="leg"><div class="no">1</div><div><b>${esc(ordered[0].n)}</b><div class="how">Start</div></div><div class="tm"></div></div>${legs}</div>
+   ${gl?`<a class="btn primary" style="justify-content:center;padding:12px" href="${gl}" target="_blank" rel="noopener">${ic("map")}Ganze Route in Google Maps</a>`:""}
+   <div class="tip">Reihenfolge per Nächster-Nachbar plus 2-opt optimiert. Zeiten sind Schätzungen (Fuß 4,5 km/h, Stadtverkehr 18 km/h, Metro inkl. Fußwegen und Wartezeit).${S.mode==="transit"?" Google Maps unterstützt bei Öffis keine Zwischenstopps, nutze dafür die Links pro Abschnitt.":""}</div>`}
+   ${ow.length?`<div><h3 style="font-size:1rem;margin-bottom:4px">Liegt auf dem Weg</h3><div class="legs">${ow.map(([i,dist])=>`<div class="leg" style="grid-template-columns:38px minmax(0,1fr) auto;align-items:center">${tile(i,true)}<div><b>${esc(i.n)}</b><div class="how">${catOf(i).n} · ${Math.round(dist*1000)} m Umweg${i.p&&i.p.t?" · "+esc(i.p.t):""}</div></div><div>${planBtn(i.id,S.routeDay!=="all"?S.routeDay:"")}</div></div>`).join("")}</div></div>`:""}
+  </div>
+  <button class="btn ghost" id="clearPlan" style="align-self:center">${ic("trash")}Plan leeren</button>`;
+  el.innerHTML=html;ordered.forEach(p=>delete p._no);}
+
+/* ===================== PRAKTISCH ===================== */
+function acc(icon,title,body,open){return `<details class="acc"${open?" open":""}><summary><div class="tile s" style="--cc:var(--accent)">${ic(icon)}</div>${title}</summary><div class="body">${body}</div></details>`;}
+function renderInfo(){const el=$("#p-praktisch");const fd=freeDays();
+  const hol=EVENTS.filter(e=>e.hol&&inRange(e.s,e.e));const winter=months().some(m=>m===11||m===12||m<=3);
+  el.innerHTML=`<div class="ptitle"><h2>Praktisch</h2></div>
+  <section class="block"><h2>In deinem Zeitraum</h2><div class="list">
+   <article class="card"><div class="card-h"><div class="tile s" style="--cc:var(--rain)">${ic("cloud")}</div><div class="t"><h3>Wetter & Kleidung</h3></div></div><p>${winter?"November: meist 11–18 °C, öfter Regenschauer, Sonnenuntergang gegen 17:15. Wasserdichte Jacke, Schichten, rutschfeste Schuhe.":"Ende Oktober: meist 15–23 °C, abends kühler, erste Regentage möglich. Leichte Jacke und feste Schuhe."}</p><div class="tip">Kurzfristige Prognose: <a href="https://www.meteo.gr/" target="_blank" rel="noopener">meteo.gr</a> (Nationales Observatorium).</div></article>
+   <article class="card"><div class="card-h"><div class="tile s" style="--cc:var(--warn)">${ic("flag")}</div><div class="t"><h3>Feiertage & Gedenktage</h3></div></div>${hol.length?`<ul style="margin:0;padding-left:18px">${hol.map(h=>`<li><b>${fmt(h.s)}</b>: ${esc(h.n)}</li>`).join("")}</ul>`:"<p>Keine gesetzlichen Feiertage im Zeitraum.</p>"}<div class="tip">An Feiertagen sind Geschäfte, Banken und Supermärkte zu. Sonntags haben viele Läden außerhalb der Touristenzonen geschlossen.</div></article>
+   <article class="card"><div class="card-h"><div class="tile s" style="--cc:var(--accent)">${ic("gift")}</div><div class="t"><h3>Gratis-Eintritt</h3></div></div>${Object.keys(fd).length?`<ul style="margin:0;padding-left:18px">${Object.entries(fd).map(([k,v])=>`<li><b>${fmt(k)}</b>: ${esc(v)}</li>`).join("")}</ul>`:"<p>Kein allgemeiner Gratis-Tag in deinem Zeitraum.</p>"}<div class="tip"><b>Für dich wichtig:</b> Unter 25 mit EU-Ausweis ist der Eintritt in staatliche Stätten (Akropolis, Agora usw.) ganzjährig frei. Ausweis an der Kasse zeigen, das Gratis-Ticket trotzdem mit Zeitslot holen.</div></article>
+  </div></section>
+  <section class="block"><h2>Gut zu wissen</h2>
+  ${acc("train","Öffentlicher Verkehr & Tickets",`<div class="tbl"><table><thead><tr><th>Ticket</th><th>Preis</th><th>Gilt für</th></tr></thead><tbody>
+    <tr><td>Einzelticket</td><td class="num">€1,20</td><td>90 Min. Metro, Bus, Tram, beliebig umsteigen</td></tr>
+    <tr><td>24 Stunden</td><td class="num">€4,10</td><td>alle Stadtlinien, ohne Flughafen</td></tr>
+    <tr><td>5 Tage</td><td class="num">€8,20</td><td>alle Stadtlinien, ohne Flughafen</td></tr>
+    <tr><td>3-Tage-Touristenticket</td><td class="num">€20</td><td>Stadtlinien + einmal Flughafen hin und zurück</td></tr>
+    <tr><td>Flughafen Metro M3</td><td class="num">€9 / €16</td><td>einfach / hin und zurück</td></tr>
+    <tr><td>Flughafenbus X95</td><td class="num">€5,50</td><td>bis Syntagma, fährt rund um die Uhr, ca. 60 Min.</td></tr>
+    <tr><td>Taxi Flughafen–Zentrum</td><td class="num">€40 / €55</td><td>Festpreis tagsüber / 0–5 Uhr, inkl. Gepäck und Maut</td></tr>
+   </tbody></table></div>
+   <ul><li>Kontaktlos zahlen: An den Metro-Schranken Karte oder Handy dranhalten (Tap2Ride).</li><li>Ticket immer entwerten. Schwarzfahren kostet das 60-Fache des Einzeltickets.</li><li>Samstags fahren M2, M3 und Tram die ganze Nacht, die grüne M1 noch nicht.</li><li>Das normale €1,20-Ticket gilt <b>nicht</b> auf dem Flughafenabschnitt der M3.</li><li>Bus und Tram in Echtzeit: App OASA Telematics.</li></ul>`,true)}
+  ${acc("coins","Preise einschätzen & Abzocke vermeiden",`<p style="margin:0">Richtwerte 2026 im Zentrum, alle mit ≈ sind Schätzungen aus Erfahrungswerten.</p>
+   <div class="tbl"><table><thead><tr><th>Was</th><th>Normal</th><th>Zu teuer ab</th></tr></thead><tbody>
+    <tr><td>Koulouri (Sesamring)</td><td class="num">≈ €0,80–1,20</td><td class="num">€2</td></tr>
+    <tr><td>Freddo Espresso</td><td class="num">≈ €2,50–4,50</td><td class="num">€6</td></tr>
+    <tr><td>Souvlaki/Falafel-Pita</td><td class="num">≈ €3,50–6</td><td class="num">€8</td></tr>
+    <tr><td>Taverne Hauptgericht</td><td class="num">≈ €9–16</td><td class="num">€20</td></tr>
+    <tr><td>Hauswein ½ l</td><td class="num">≈ €6–10</td><td class="num">€15</td></tr>
+    <tr><td>Bier 0,5 l in der Bar</td><td class="num">≈ €5–7</td><td class="num">€9</td></tr>
+    <tr><td>Cocktail</td><td class="num">≈ €10–14</td><td class="num">€18</td></tr>
+    <tr><td>Brot & Gedeck p. P.</td><td class="num">≈ €1–2,50</td><td>muss auf der Karte stehen</td></tr>
+   </tbody></table></div>
+   <ul><li>Schlepper vor Restaurants in Plaka und Monastiraki: weitergehen. Gute Tavernen locken nicht.</li><li>Karte ohne Preise oder Fisch „pro Kilo“: Preis vorher fragen.</li><li>Unbestellte Vorspeisen werden berechnet. Zurückgeben, wenn du sie nicht willst.</li><li>„Freundschaftsbändchen“, Rosen oder ein „Geschenk“ in die Hand gedrückt: nicht annehmen.</li><li>Fremde, die dich in eine bestimmte Bar mitnehmen wollen: ablehnen. Am Ende steht eine absurde Rechnung.</li><li>Taxi: Das Taxameter muss laufen, Tarif 1 von 5 bis 24 Uhr, Tarif 2 nachts. Am einfachsten per App bestellen.</li><li>Trinkgeld: aufrunden oder 5–10 %, keine Pflicht.</li></ul>`)}
+  ${acc("shield","Sicherheit",`<ul>
+   <li>Athen ist sicher, aber Taschendiebe sind aktiv: Metro M1 zwischen Monastiraki und Piräus, Flughafen-Metro, Bus X95, Monastiraki-Platz.</li>
+   <li>Streiks (απεργία) und Demos am Syntagma sind häufig und meist angekündigt. Vor Fahrten zum Flughafen kurz prüfen.</li>
+   <li>Um den 17. November Exarchia und das Polytechnikum abends meiden.</li>
+   <li>Omonia und die Seitenstraßen nachts eher meiden.</li>
+   <li>Straßenhunde sind meist geimpft und friedlich (Halsband = registriert).</li>
+   <li>Autofahrer halten nicht immer an Zebrastreifen. Beim Überqueren aufpassen, auch bei Grün.</li>
+   <li>Notruf <b class="mono">112</b> (auch Englisch) · Touristenpolizei <b class="mono">1571</b></li></ul>`)}
+  ${acc("hand","Bräuche & ungeschriebene Regeln",`<ul>
+   <li><b>Ne</b> (ναι) heißt ja, <b>óchi</b> heißt nein. Ein Kopfnicken nach oben mit Zungenschnalzen bedeutet ebenfalls nein.</li>
+   <li>Die offene Handfläche Richtung Gesicht (Moutza) ist eine grobe Beleidigung. Beim Winken und Taxi-Rufen Finger lieber zusammen.</li>
+   <li>In Kirchen Schultern und Knie bedecken, leise sein.</li>
+   <li>Toilettenpapier in älteren Gebäuden in den Eimer werfen, nicht ins WC.</li>
+   <li>Gegessen wird spät: Mittag ab 14 Uhr, Abendessen ab 21 Uhr. Um 19 Uhr ist die Taverne noch leer.</li>
+   <li>Essen wird geteilt. Mehrere Gerichte in die Mitte zu bestellen ist normal.</li>
+   <li>Leitungswasser ist im Zentrum trinkbar und wird in Tavernen oft gratis hingestellt.</li>
+   <li>Ein paar Worte Griechisch öffnen Türen: Kaliméra, Efcharistó.</li>
+   <li>Von ca. 15 bis 17:30 Uhr ist in Wohnvierteln Mittagsruhe.</li></ul>`)}
+  ${acc("phone","Sinnvolle Apps",`<div class="tbl"><table><tbody>
+   <tr><td><b>Google Maps</b></td><td>Fußwege, Metro- und Busrouten in Echtzeit</td></tr>
+   <tr><td><b>OASA Telematics</b></td><td>Offizielle Echtzeit-Ankunft von Bus und Trolley</td></tr>
+   <tr><td><b>FreeNow / Uber / Bolt</b></td><td>Taxi bestellen; in Athen fahren darüber lizenzierte Taxis</td></tr>
+   <tr><td><b>Hellenic Heritage</b> (hhticket.gr)</td><td>Offizielle Tickets für Akropolis und staatliche Stätten</td></tr>
+   <tr><td><b>Ferryhopper</b></td><td>Fähren nach Ägina, Hydra und auf die Kykladen</td></tr>
+   <tr><td><b>HappyCow</b></td><td>Vegetarische und vegane Lokale in der Nähe</td></tr>
+   <tr><td><b>efood / Wolt</b></td><td>Essenslieferung, viele vegane Optionen</td></tr>
+   <tr><td><b>meteo.gr</b></td><td>Genaueste Wetterprognose für Griechenland</td></tr>
+   <tr><td><b>Google Übersetzer</b></td><td>Griechisch offline laden, Kamera-Übersetzung für Speisekarten</td></tr>
+  </tbody></table></div>`)}
+  </section>`;}
+
+/* ===================== WIRING ===================== */
+const TABS=["entdecken","events","essen","plan","praktisch"];
+function setTab(t){if(!TABS.includes(t))t="entdecken";S.tab=t;save();document.querySelectorAll("#tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t));TABS.forEach(x=>$("#p-"+x).hidden=x!==t);window.scrollTo({top:0});}
+function syncControls(){$("#dStart").value=S.start;$("#dEnd").value=S.end;
+  $("#tRain").checked=!!S.rain;$("#tRain2").checked=!!S.rain;$("#tRainL").classList.toggle("on",!!S.rain);
+  $("#tVeg").checked=!!S.veg;$("#tVegan").checked=!!S.vegan;$("#tLf").checked=!!S.lf;
+  const ds=days();const a=d(ds[0]),b=d(ds[ds.length-1]);
+  $("#rangeLabel").textContent=a.getUTCMonth()===b.getUTCMonth()?`${a.getUTCDate()}.–${b.getUTCDate()}. ${MON[b.getUTCMonth()]}`:`${a.getUTCDate()}. ${MON[a.getUTCMonth()]} – ${b.getUTCDate()}. ${MON[b.getUTCMonth()]}`;}
+function renderAll(){syncControls();renderDiscover();renderEvents();renderFood();renderPlan();renderInfo();}
+function openSheet(o){$("#sheet").hidden=!o;$("#scrim").hidden=!o;if(o)$("#dStart").focus();else $("#openSettings").focus();}
+
+document.addEventListener("click",e=>{
+  const t=e.target.closest("[data-tab],[data-cat],[data-plan],[data-goto],[data-mode],[data-view],.marker,#clearPlan,#openSettings,#closeSettings,#doneSettings,#scrim");if(!t)return;
+  if(t.id==="openSettings"){openSheet(true);return;}
+  if(t.id==="closeSettings"||t.id==="doneSettings"||t.id==="scrim"){openSheet(false);return;}
+  if(t.dataset.tab){setTab(t.dataset.tab);return;}
+  if(t.dataset.view){S.view=t.dataset.view;save();renderDiscover();return;}
+  if(t.dataset.cat!==undefined){const c=t.dataset.cat;if(!c)S.cats=[];else S.cats=S.cats.includes(c)?S.cats.filter(x=>x!==c):[...S.cats,c];save();renderDiscover();return;}
+  if(t.dataset.plan){togglePlan(t.dataset.plan,t.dataset.day);return;}
+  if(t.dataset.mode){S.mode=t.dataset.mode;save();renderPlan();return;}
+  if(t.id==="clearPlan"){S.plan={};S.sample=false;save();renderAll();toast("Plan geleert");return;}
+  if(t.classList.contains("marker")&&S.tab==="entdecken"){hlId=t.dataset.id;renderDiscover();return;}
+  const id=t.dataset.goto||t.dataset.id;if(id)goTo(id);
+});
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"&&!$("#sheet").hidden){openSheet(false);return;}
+  if((e.key==="Enter"||e.key===" ")&&e.target.classList?.contains("marker")){e.preventDefault();e.target.dispatchEvent(new MouseEvent("click",{bubbles:true}));}});
+function goTo(id){const it=byId(id);if(!it||!ITEMS.includes(it))return;if(S.tab!=="entdecken")setTab("entdecken");
+  if(S.cats.length&&!S.cats.includes(it.c))S.cats=[];if(S.q&&!filteredItems().includes(it))S.q="";
+  S.view="list";hlId=id;save();renderDiscover();const c=document.getElementById("card-"+id);if(c)c.scrollIntoView({behavior:"smooth",block:"center"});}
+document.addEventListener("change",e=>{const t=e.target;
+  if(t.id==="dStart"||t.id==="dEnd"){if(!t.value)return;S[t.id==="dStart"?"start":"end"]=t.value;if(S.end<S.start){if(t.id==="dStart")S.end=S.start;else S.start=S.end;}save();renderAll();return;}
+  const map={tRain:"rain",tRain2:"rain",tVeg:"veg",tVegan:"vegan",tLf:"lf"};
+  if(map[t.id]){S[map[t.id]]=t.checked;if(t.id==="tVegan"&&t.checked)S.veg=true;if(t.id==="tVeg"&&!t.checked)S.vegan=false;save();renderAll();if(t.id==="tRain")toast(t.checked?"Regentag-Modus an":"Regentag-Modus aus");return;}
+  if(t.dataset.done){S.plan[t.dataset.done].done=t.checked;save();renderPlan();return;}
+  if(t.dataset.day&&t.tagName==="SELECT"){S.plan[t.dataset.day].day=t.value;S.sample=false;save();renderPlan();return;}
+  if(t.id==="routeDay"){S.routeDay=t.value;S.routeStart=null;save();renderPlan();return;}
+  if(t.id==="routeStart"){S.routeStart=t.value;save();renderPlan();return;}
+});
+
+if(S.sample&&!Object.keys(S.plan).length){
+  [["akropolis","2026-11-06"],["akromuseum","2026-11-06"],["filopappou","2026-11-06"],["veganaki","2026-11-06"],
+   ["nam","2026-11-07"],["taf","2026-11-07"],["veganbeat","2026-11-07"],["lykabettus","2026-11-07"]]
+  .forEach(([id,day])=>S.plan[id]={day,done:false});}
+renderAll();setTab(TABS.includes(location.hash.slice(1))?location.hash.slice(1):(S.tab||"entdecken"));
+
+</script>
+</body>
+</html>
