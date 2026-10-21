@@ -12,6 +12,9 @@ Persönlicher Reiseplaner für Athen als Web-App: Sehenswürdigkeiten, vegetaris
 - **Plan:** Tripliste mit Tageszuordnung, automatisch optimierte Route zu Fuß, mit Öffis oder mit dem Auto, Vorschläge für Orte auf dem Weg und Links zu Google Maps
 - **Praktisch:** Tickets und Öffis, Preisrichtwerte gegen Abzocke, Sicherheit, Bräuche und nützliche Apps
 - **Regentag-Modus:** Drinnen-Ziele zuerst, Alternativen für Outdoor-Ziele
+- **Standort:** Über den Zielscheiben-Button oben zeigt jede Karte die geschätzte Wegzeit zu Fuß, mit Öffis und mit dem Auto. Sortierung nach Nähe, „Am nächsten“-Tipp auf der Startseite und Route ab dem eigenen Standort. Der Standort wird nicht gespeichert.
+
+Die Zeitangabe „ca. 1,5 h vor Ort“ ist die geschätzte Aufenthaltsdauer und fließt in die Tagesplanung ein.
 
 Preise: Ein fester Preis ist recherchiert (Stand Oktober 2026), ein Preis mit ≈ ist eine Schätzung, „Preis prüfen“ verlinkt auf die Quelle.
 

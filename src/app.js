@@ -1,9 +1,29 @@
 /* ===================== STATE ===================== */
 const K="athen-kompass-v1";
-const DEF={start:"2026-11-05",end:"2026-11-09",rain:false,veg:true,vegan:false,lf:true,plan:{},cats:[],q:"",mode:"walk",routeDay:"all",tab:"entdecken",sample:true,view:"list"};
+const DEF={start:"2026-11-05",end:"2026-11-09",rain:false,veg:true,vegan:false,lf:true,plan:{},cats:[],q:"",mode:"walk",routeDay:"all",tab:"entdecken",sample:true,view:"list",sort:"top"};
 let S=Object.assign({},DEF);
 try{const raw=localStorage.getItem(K);if(raw)S=Object.assign({},DEF,JSON.parse(raw));}catch(e){}
 function save(){try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}}
+// Standort bleibt nur im Arbeitsspeicher, wird nicht gespeichert
+let ME=null;
+const ATHENS={lat:37.9755,lon:23.7348};
+function locate(){
+  if(!("geolocation" in navigator)){toast("Dein Browser unterstützt keine Standortabfrage");return;}
+  const b=$("#locBtn");b.classList.add("busy");
+  navigator.geolocation.getCurrentPosition(p=>{b.classList.remove("busy");
+    ME={lat:p.coords.latitude,lon:p.coords.longitude,acc:p.coords.accuracy};
+    const far=hav(ME,ATHENS);
+    toast(far>50?`Standort gefunden, ${Math.round(far)} km von Athen`:`Standort gefunden (±${Math.round(ME.acc)} m)`);
+    if(far<=50)S.sort="near";save();renderAll();},
+   err=>{b.classList.remove("busy");toast(err.code===1?"Standort abgelehnt. In den Browser-Einstellungen erlauben.":"Standort konnte nicht ermittelt werden");},
+   {enableHighAccuracy:true,timeout:12000,maximumAge:60000});}
+function fmtMin(m){m=Math.max(1,Math.round(m));return m<60?`${m} Min.`:`${Math.floor(m/60)} h ${String(m%60).padStart(2,"0")}`;}
+function distRow(it){if(!ME||!hasGeo(it))return"";const km=hav(ME,it);
+  const car=legCost(ME,it,"car");
+  if(km>25)return `<div class="dist"><span title="Auto">${ic("car")}<b>${fmtMin(car.min)}</b></span><span>Öffis: Fernbus, Zug oder Fähre</span><span class="km">${kmf(km)} km</span></div>`;
+  const w=legCost(ME,it,"walk"),t=legCost(ME,it,"transit");
+  const tTxt=t.how==="zu Fuß"?"zu Fuß schneller":fmtMin(t.min);
+  return `<div class="dist" title="Geschätzte Wegzeit von deinem Standort"><span title="Zu Fuß">${ic("walk")}<b>${fmtMin(w.min)}</b></span><span title="${esc(t.how)}">${ic("train")}<b>${tTxt}</b></span><span title="Auto/Taxi">${ic("car")}<b>${fmtMin(car.min)}</b></span><span class="km">${kmf(w.km)} km</span></div>`;}
 
 /* ===================== HELPERS ===================== */
 const $=s=>document.querySelector(s);
@@ -69,12 +89,13 @@ function mapSVG(points,{route=null,hl=null,dimIds=new Set()}={}){
   let g=baseMap();
   if(route&&route.length>1){const pts=route.filter(onMap).map(r=>prj(r.lat,r.lon).map(v=>v.toFixed(1)).join(",")).join(" ");
     g+=`<polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="3.5" stroke-dasharray="1 7" stroke-linecap="round"/>`;}
-  points.filter(onMap).forEach(it=>{const [x,y]=prj(it.lat,it.lon);const col=`var(${catOf(it).c})`;
+  points.filter(onMap).filter(it=>it.id!=="me").forEach(it=>{const [x,y]=prj(it.lat,it.lon);const col=`var(${catOf(it).c})`;
     const cls=["marker",dimIds.has(it.id)?"dim":"",hl===it.id?"hl":""].join(" ");
     const num=it._no?`<text x="${x.toFixed(1)}" y="${(y+3.5).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="800" fill="var(--bg)" font-family="Commissioner,sans-serif">${it._no}</text>`:"";
     g+=`<g class="${cls}" data-id="${it.id}" tabindex="0" role="button" aria-label="${esc(it.n)}"><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${it._no?10:hl===it.id?9:7}" fill="${col}"/>${num}<title>${esc(it.n)}</title></g>`;});
+  if(ME&&onMap(ME)){const [x,y]=prj(ME.lat,ME.lon);g+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="16" fill="var(--rain)" opacity=".22"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="7" fill="var(--rain)" stroke="var(--mapbg)" stroke-width="3"/><text x="${(x+12).toFixed(1)}" y="${(y+4).toFixed(1)}" font-size="11" font-weight="800" fill="var(--rain)" font-family="Commissioner,sans-serif">Du</text>`;}
   return `<svg viewBox="0 0 ${MW} ${MH}" role="img" aria-label="Schematische Karte des Athener Zentrums"><defs><clipPath id="clipm"><rect width="${MW}" height="${MH}"/></clipPath></defs><g clip-path="url(#clipm)">${g}</g></svg>`;}
-function mapCaption(){return `<div class="mapcap"><span><i style="background:var(--m1)"></i>M1</span><span><i style="background:var(--m2)"></i>M2</span><span><i style="background:var(--m3)"></i>M3</span><span><i style="background:var(--tram)"></i>Tram</span><span>Schematisch. Ziele außerhalb des Zentrums nur in der Liste.</span></div>`;}
+function mapCaption(){return `<div class="mapcap"><span><i style="background:var(--m1)"></i>M1</span><span><i style="background:var(--m2)"></i>M2</span><span><i style="background:var(--m3)"></i>M3</span><span><i style="background:var(--tram)"></i>Tram</span><span>Schematisch. Ziele außerhalb des Zentrums nur in der Liste.${ME&&!onMap(ME)?" Dein Standort liegt außerhalb der Karte.":ME?" Blauer Punkt = du.":""}</span></div>`;}
 
 /* ===================== PLAN HELPERS ===================== */
 function inPlan(id){return !!S.plan[id];}
@@ -97,8 +118,9 @@ function itemCard(it){const cat=catOf(it);const dim=isDim(it);
   const dur=it.dur?(it.dur>=60?(Math.round(it.dur/30)/2).toString().replace(".",",")+" h":it.dur+" Min."):"";
   return `<article class="card${dim?" dim":""}${hlId===it.id?" hl":""}" id="card-${it.id}" style="--cc:var(${cat.c})">
    <div class="card-h">${tile(it)}<div class="t"><div class="cat">${cat.n}</div><h3>${esc(it.n)}</h3>
-   <div class="meta"><span>${esc(it.a)}</span>${dur?`<span>ca. ${dur}</span>`:""}</div></div></div>
+   <div class="meta"><span>${esc(it.a)}</span>${dur?`<span class="dur" title="Geschätzte Aufenthaltsdauer vor Ort">${ic("clock")}ca. ${dur} vor Ort</span>`:""}</div></div></div>
    <div class="badges">${priceBadge(it.p)}${inBadge(it)}${it.eu25?'<span class="b free">EU unter 25: frei</span>':""}${dietBadges(it)}${seasonOff?'<span class="b warn">im Zeitraum geschlossen</span>':""}${closedDays?`<span class="b warn">${closedDays} geschlossen</span>`:""}</div>
+   ${distRow(it)}
    <p>${esc(it.d)}</p>
    ${it.p&&it.p.n?`<div class="tip">${esc(it.p.n)}</div>`:""}
    ${it.tip?`<div class="tip"><b>Tipp:</b> ${esc(it.tip)}</div>`:""}
@@ -115,9 +137,11 @@ function heroHtml(){const ds=days();const t=todayIso();const h=new Date().getHou
   const nFree=Object.keys(freeDays()).length,nEv=EVENTS.filter(e=>!e.hol&&inRange(e.s,e.e)).length,nPlan=Object.keys(S.plan).filter(byId).length;
   return `<div class="hero"><svg class="cols" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 22h18M6 18v-7M10 18v-7M14 18v-7M18 18v-7M12 2l8 5H4z"/></svg>
    <div><div class="greet">${greet}</div><h2>${head}</h2><div class="sub">${sub}</div></div>
+   ${(()=>{if(!ME||hav(ME,ATHENS)>50)return"";const c=ITEMS.filter(i=>hasGeo(i)&&i.c!=="trip"&&!isDim(i)).map(i=>[i,hav(ME,i)]).sort((a,b)=>a[1]-b[1])[0];if(!c)return"";const w=legCost(ME,c[0],"walk");return `<button class="near" data-goto="${c[0].id}">${ic("locate")}<span>Am nächsten: <b>${esc(c[0].n)}</b> · ${fmtMin(w.min)} zu Fuß</span></button>`;})()}
    <div class="stats"><button class="stat" data-tab="events"><b>${nEv}</b><span>Events</span></button><button class="stat" data-tab="events"><b>${nFree}</b><span>Gratis-Tage</span></button><button class="stat" data-tab="plan"><b>${nPlan}</b><span>im Plan</span></button></div></div>`;}
 function renderDiscover(){const el=$("#p-entdecken");const list=filteredItems();
-  const sorted=[...list].sort((a,b)=>(isDim(a)-isDim(b)));
+  const near=ME&&S.sort==="near";
+  const sorted=[...list].sort((a,b)=>near?((hasGeo(a)?hav(ME,a):1e4)-(hasGeo(b)?hav(ME,b):1e4)):(isDim(a)-isDim(b)));
   const chips=Object.entries(CATS).filter(([k])=>k!=="event").map(([k,v])=>`<button class="chip" data-cat="${k}" aria-pressed="${S.cats.includes(k)}" style="--cc:var(${v.c})"><span style="color:var(${v.c})">${ic(v.i)}</span>${v.n}</button>`).join("");
   const dimIds=new Set(list.filter(isDim).map(i=>i.id));
   const sel=hlId&&list.find(i=>i.id===hlId);
@@ -125,7 +149,7 @@ function renderDiscover(){const el=$("#p-entdecken");const list=filteredItems();
    ${S.rain?`<div class="notice rain">${ic("umbrella")}<span><b>Regentag:</b> Drinnen-Ziele stehen oben. Bei Outdoor-Zielen siehst du eine Alternative. Akropolis und Areopag sind bei Nässe wegen der glatten Marmorflächen unangenehm.</span></div>`:""}
    <div class="searchbox">${ic("search")}<input id="q" type="search" placeholder="Suchen, z. B. Plaka, vegan, Museum" value="${esc(S.q)}" aria-label="Suchen"></div>
    <div class="chips" role="group" aria-label="Kategorien"><button class="chip" data-cat="" aria-pressed="${S.cats.length===0}">Alle</button>${chips}</div>
-   <div class="row" style="justify-content:space-between"><small style="color:var(--muted)">${list.length} Orte</small><div class="seg" role="group" aria-label="Ansicht"><button data-view="list" aria-pressed="${S.view!=="map"}">${ic("list")}Liste</button><button data-view="map" aria-pressed="${S.view==="map"}">${ic("map")}Karte</button></div></div>
+   <div class="row" style="justify-content:space-between">${ME&&S.view!=="map"?`<div class="seg" role="group" aria-label="Sortierung"><button data-sort="top" aria-pressed="${!near}">Empfohlen</button><button data-sort="near" aria-pressed="${near}">${ic("locate")}Nähe</button></div>`:`<small style="color:var(--muted)">${list.length} Orte${ME?"":" · Standort oben aktivieren für Wegzeiten"}</small>`}<div class="seg" role="group" aria-label="Ansicht"><button data-view="list" aria-pressed="${S.view!=="map"}">${ic("list")}Liste</button><button data-view="map" aria-pressed="${S.view==="map"}">${ic("map")}Karte</button></div></div>
    ${S.view==="map"?`<div class="mapbox">${mapSVG(list,{hl:hlId,dimIds})}${mapCaption()}</div>${sel?itemCard(sel):`<div class="tip" style="text-align:center">Tippe auf einen Punkt für Details.</div>`}`
    :`<div class="list">${sorted.length?sorted.map(itemCard).join(""):`<div class="empty">${ic("search")}Keine Treffer. Filter zurücksetzen?</div>`}</div>`}`;
   const q=$("#q");q.addEventListener("input",()=>{S.q=q.value;save();const pos=q.selectionStart;renderDiscover();const n=$("#q");n.focus();n.setSelectionRange(pos,pos);});}
@@ -156,7 +180,7 @@ function renderEvents(){const el=$("#p-events");const ds=days();const fd=freeDay
   el.innerHTML=html;}
 function eventCard(e,dayIso){const dim=S.rain&&e.in===false;const multi=e.s!==e.e?`${fmt(e.s)} – ${fmt(e.e)}`:fmt(e.s);const cc=e.hol?"--warn":"--c-event";
   return `<article class="card${dim?" dim":""}" id="card-${e.id}" style="--cc:var(${cc})"><div class="card-h">${tile(e)}<div class="t"><div class="cat">${e.hol?"Feiertag / Gedenktag":"Event"}</div><h3>${esc(e.n)}</h3><div class="meta"><span>${multi}</span><span>${esc(e.venue)}</span></div></div></div>
-   <div class="badges">${priceBadge(e.p)}${inBadge(e)}</div><p>${esc(e.d)}</p>
+   <div class="badges">${priceBadge(e.p)}${inBadge(e)}</div>${distRow(e)}<p>${esc(e.d)}</p>
    <div class="actions">${e.hol&&!hasGeo(e)?"":planBtn(e.id,dayIso>=e.s&&dayIso<=e.e?dayIso:e.s)}<a class="btn" href="${mapsLink({n:e.venue,lat:e.lat,lon:e.lon})}" target="_blank" rel="noopener">${ic("pin")}Ort</a>${e.p&&e.p.u?`<a class="btn ghost" href="${esc(e.p.u)}" target="_blank" rel="noopener">${ic("ext")}Infos</a>`:""}</div></article>`;}
 
 /* ===================== ESSEN ===================== */
@@ -227,6 +251,8 @@ function renderPlan(){const el=$("#p-plan");const ds=days();const ids=Object.key
   const routeDays=["all",...order.filter(x=>x)];if(!routeDays.includes(S.routeDay))S.routeDay="all";
   let pts=ids.map(byId).filter(hasGeo).filter(it=>S.routeDay==="all"||S.plan[it.id].day===S.routeDay);
   if(S.mode==="walk")pts=pts.filter(p=>p.c!=="trip");
+  const cand=pts;const meObj=ME?{id:"me",n:"Mein Standort",lat:ME.lat,lon:ME.lon,dur:0,a:""}:null;
+  if(meObj&&S.routeStart==="me")pts=[meObj,...pts];
   const startSel=S.routeStart&&pts.find(p=>p.id===S.routeStart)?S.routeStart:(pts[0]&&pts[0].id);
   const ordered=optimize(pts,startSel);ordered.forEach((p,i)=>p._no=i+1);
   let tot={km:0,min:0},legs="";
@@ -237,13 +263,13 @@ function renderPlan(){const el=$("#p-plan");const ds=days();const ids=Object.key
   html+=`<div class="routebox"><h2>${ic("route")}Route berechnen</h2>
    <div class="row"><select id="routeDay" class="sel" aria-label="Tag für die Route">${routeDays.map(x=>`<option value="${x}"${S.routeDay===x?" selected":""}>${x==="all"?"Alle Ziele im Plan":fmt(x,true)}</option>`).join("")}</select>
    <div class="seg" role="group" aria-label="Verkehrsmittel">${[["walk","Zu Fuß"],["transit","Öffis"],["car","Auto"]].map(m=>`<button data-mode="${m[0]}" aria-pressed="${S.mode===m[0]}">${m[1]}</button>`).join("")}</div></div>
-   ${ordered.length>1?`<div class="row"><label for="routeStart" style="font-size:.82rem;color:var(--muted);font-weight:700">Start</label><select id="routeStart" class="sel">${pts.map(p=>`<option value="${p.id}"${p.id===startSel?" selected":""}>${esc(p.n)}</option>`).join("")}</select></div>`:""}
+   ${cand.length>1||(meObj&&cand.length)?`<div class="row"><label for="routeStart" style="font-size:.82rem;color:var(--muted);font-weight:700">Start</label><select id="routeStart" class="sel">${meObj?`<option value="me"${startSel==="me"?" selected":""}>📍 Mein Standort</option>`:""}${cand.map(p=>`<option value="${p.id}"${p.id===startSel?" selected":""}>${esc(p.n)}</option>`).join("")}</select>${meObj?"":`<button class="btn ghost" id="locBtn2">${ic("locate")}Ab meinem Standort</button>`}</div>`:""}
    ${S.mode==="walk"&&ids.map(byId).some(p=>p.c==="trip")?`<div class="tip">Tagesausflüge sind zu Fuß ausgeblendet, wähle Öffis oder Auto.</div>`:""}
    ${ordered.length<2?`<div class="empty">${ic("pin")}Für eine Route brauchst du mindestens zwei Ziele mit Standort${S.routeDay!=="all"?" an diesem Tag":""}.</div>`:`
    <div class="sumgrid"><div><b>${kmf(tot.km)} km</b><span>Wege ≈</span></div><div><b>${Math.round(tot.min)} Min.</b><span>unterwegs ≈</span></div><div><b>${kmf(stay/60)} h</b><span>Aufenthalt ≈</span></div><div><b>${kmf((tot.min+stay)/60)} h</b><span>gesamt ≈</span></div></div>
    ${(tot.min+stay)>600?`<div class="notice warn">${ic("alert")}<span><b>Viel für einen Tag:</b> über 10 Stunden. Verteile die Ziele auf mehrere Tage.</span></div>`:""}
    <div class="mapbox">${mapSVG(ordered,{route:ordered})}${mapCaption()}</div>
-   <div class="legs"><div class="leg"><div class="no">1</div><div><b>${esc(ordered[0].n)}</b><div class="how">Start</div></div><div class="tm"></div></div>${legs}</div>
+   <div class="legs"><div class="leg"><div class="no"${ordered[0].id==="me"?' style="background:var(--rain)"':""}>1</div><div><b>${esc(ordered[0].n)}</b><div class="how">Start</div></div><div class="tm"></div></div>${legs}</div>
    ${gl?`<a class="btn primary" style="justify-content:center;padding:12px" href="${gl}" target="_blank" rel="noopener">${ic("map")}Ganze Route in Google Maps</a>`:""}
    <div class="tip">Reihenfolge per Nächster-Nachbar plus 2-opt optimiert. Zeiten sind Schätzungen (Fuß 4,5 km/h, Stadtverkehr 18 km/h, Metro inkl. Fußwegen und Wartezeit).${S.mode==="transit"?" Google Maps unterstützt bei Öffis keine Zwischenstopps, nutze dafür die Links pro Abschnitt.":""}</div>`}
    ${ow.length?`<div><h3 style="font-size:1rem;margin-bottom:4px">Liegt auf dem Weg</h3><div class="legs">${ow.map(([i,dist])=>`<div class="leg" style="grid-template-columns:38px minmax(0,1fr) auto;align-items:center">${tile(i,true)}<div><b>${esc(i.n)}</b><div class="how">${catOf(i).n} · ${Math.round(dist*1000)} m Umweg${i.p&&i.p.t?" · "+esc(i.p.t):""}</div></div><div>${planBtn(i.id,S.routeDay!=="all"?S.routeDay:"")}</div></div>`).join("")}</div></div>`:""}
@@ -319,7 +345,7 @@ function renderInfo(){const el=$("#p-praktisch");const fd=freeDays();
 const TABS=["entdecken","events","essen","plan","praktisch"];
 function setTab(t){if(!TABS.includes(t))t="entdecken";S.tab=t;save();document.querySelectorAll("#tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t));TABS.forEach(x=>$("#p-"+x).hidden=x!==t);window.scrollTo({top:0});}
 function syncControls(){$("#dStart").value=S.start;$("#dEnd").value=S.end;
-  $("#tRain").checked=!!S.rain;$("#tRain2").checked=!!S.rain;$("#tRainL").classList.toggle("on",!!S.rain);
+  $("#locBtn").classList.toggle("on",!!ME);$("#tRain").checked=!!S.rain;$("#tRain2").checked=!!S.rain;$("#tRainL").classList.toggle("on",!!S.rain);
   $("#tVeg").checked=!!S.veg;$("#tVegan").checked=!!S.vegan;$("#tLf").checked=!!S.lf;
   const ds=days();const a=d(ds[0]),b=d(ds[ds.length-1]);
   $("#rangeLabel").textContent=a.getUTCMonth()===b.getUTCMonth()?`${a.getUTCDate()}.–${b.getUTCDate()}. ${MON[b.getUTCMonth()]}`:`${a.getUTCDate()}. ${MON[a.getUTCMonth()]} – ${b.getUTCDate()}. ${MON[b.getUTCMonth()]}`;}
@@ -327,7 +353,10 @@ function renderAll(){syncControls();renderDiscover();renderEvents();renderFood()
 function openSheet(o){$("#sheet").hidden=!o;$("#scrim").hidden=!o;if(o)$("#dStart").focus();else $("#openSettings").focus();}
 
 document.addEventListener("click",e=>{
-  const t=e.target.closest("[data-tab],[data-cat],[data-plan],[data-goto],[data-mode],[data-view],.marker,#clearPlan,#openSettings,#closeSettings,#doneSettings,#scrim");if(!t)return;
+  const t=e.target.closest("#locBtn,#locBtn2,[data-sort],[data-tab],[data-cat],[data-plan],[data-goto],[data-mode],[data-view],.marker,#clearPlan,#openSettings,#closeSettings,#doneSettings,#scrim");if(!t)return;
+  if(t.id==="locBtn"){locate();return;}
+  if(t.id==="locBtn2"){S.routeStart="me";save();locate();return;}
+  if(t.dataset.sort){S.sort=t.dataset.sort;save();renderDiscover();return;}
   if(t.id==="openSettings"){openSheet(true);return;}
   if(t.id==="closeSettings"||t.id==="doneSettings"||t.id==="scrim"){openSheet(false);return;}
   if(t.dataset.tab){setTab(t.dataset.tab);return;}
