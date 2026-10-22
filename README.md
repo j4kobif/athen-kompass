@@ -8,7 +8,7 @@ Persönlicher Reiseplaner für Athen als Web-App: Sehenswürdigkeiten, vegetaris
 
 - **Entdecken:** Sehenswürdigkeiten, Museen, Aussichtspunkte, Cafés, Restaurants, Bars, Aktivitäten und Tagesausflüge als Liste oder auf einer schematischen Karte mit den Metrolinien
 - **Events & Termine:** Feiertage, Gratis-Eintrittstage und Veranstaltungen passend zum gewählten Zeitraum
-- **Essen:** Typische griechische Gerichte mit Filtern für vegetarisch, vegan und laktosefrei, dazu eine kleine Sprachhilfe
+- **Essen:** Typische griechische Gerichte mit Filtern für vegetarisch, vegan und laktosefrei, Lokale nach Küche filterbar (Frühstück, Griechisch, Street Food, Asiatisch, Italienisch, Orientalisch, Süßes, Kaffee …), dazu eine kleine Sprachhilfe
 - **Plan › Tripliste:** Ziele pro Tag (einklappbar), automatisch optimierte Route zu Fuß, mit Öffis oder mit dem Auto, Vorschläge für Orte auf dem Weg und Links zu Google Maps
 - **Plan › Tagesvorschlag:** Tag, Startzeit, Dauer, Tempo, Interessen, Pausen und Events wählen – die App baut einen Zeitplan unter Berücksichtigung von Öffnungszeiten, Auslastung, Sonnenuntergang und Gratis-Tagen
 - **Plan › Routen:** Routen als Favoriten speichern, später umbenennen, umsortieren, Stopps hinzufügen oder entfernen, optimieren, kopieren oder per WhatsApp teilen

@@ -35,7 +35,20 @@ const HOURS={
  lykabettus:{a:ALLY,v:0,note:"Fußweg jederzeit; Standseilbahn tagsüber bis spät abends"},
  ermou:{a:"Mo-Fr 09:00-21:00, Sa 09:00-18:00, So zu",v:0},
  snfcc:{a:"Mo-So 06:00-24:00",v:0,note:"Park; Bibliothek und Gebäude kürzer"},
- tram:{a:"Mo-So 05:30-24:00",v:0}
+ tram:{a:"Mo-So 05:30-24:00",v:0},
+ zampano:{a:"Mo-Di 08:30-16:00, Mi-So 08:30-24:00",v:0},
+ ergon:{a:"Mo-So 07:30-24:00",v:0},
+ brunchers:{a:"Mo-Fr 08:00-16:00, Sa-So 08:00-18:00",v:0},
+ koulouripsyrri:{a:ALLY,v:0,note:"laut Guide rund um die Uhr geöffnet"},
+ serbetia:{a:"Mo-So 10:00-00:30",v:0},
+ krinos:{a:"Mo 08:30-18:30, Di 08:30-20:30, Mi 08:30-18:30, Do-Fr 08:30-20:30, Sa 08:30-18:30, So zu",v:0},
+ akra:{a:"Mo zu, Di-So 08:00-16:00",v:0},
+ beyhammam:{a:"Mo-So 08:30-15:30",v:0},
+ instrumente:{a:"Mo zu, Di-So 10:00-18:00",v:0},
+ daphni:{a:"Mo zu, Di-Mi 09:00-16:00, Do zu, Fr-So 09:00-16:00",v:0},
+ theatertour:{a:"Mo-Di zu, Mi 11:00-12:00, Do-So zu",v:0,note:"Nur mit Reservierung, maximal 15 Personen"},
+ mitropoli:{a:ALLY,v:1},friedhof:{w:"Mo-So 07:30-17:00",s:"Mo-So 07:30-20:00",v:0},akademie:{a:ALLY,v:1},
+ mets:{a:ALLY,v:1},pangrativiertel:{a:ALLY,v:1},koukakiviertel:{a:ALLY,v:1},romantso:{a:"Mo-So 10:00-02:00",v:0}
 };
 const TYPICAL={food:"Mo-So 12:00-24:00",cafe:"Mo-So 08:00-20:00",bar:"Mo-So 19:00-02:00",museum:"Mo-So 10:00-17:00",act:"Mo-So 10:00-20:00",sight:ALLY,view:ALLY,trip:ALLY};
 const DIDX={So:0,Mo:1,Di:2,Mi:3,Do:4,Fr:5,Sa:6};
@@ -56,7 +69,8 @@ function openAt(it,day,min){const hf=hoursFor(it,day);if(!hf)return true;return 
 
 /* ===================== AUSLASTUNG ===================== */
 const KIND_OVR={plaka:"street",monastiraki:"street",streetart:"street",ermou:"street",anafiotika_cats:"street",herodes:"street",varvakios:"market",kypseli:"market",laiki:"market",
- snfcc:"local",mikrolimano:"local",tram:"local",hymettos:"local",vouliagmeni:"local",lykabettus:"sunset",filopappou:"sunset",areopag:"sunset",a4athens:"bar",couleur:"bar",galaxy:"bar",wache:"guard",akromuseum:"amuseum"};
+ snfcc:"local",mikrolimano:"local",tram:"local",hymettos:"local",vouliagmeni:"local",lykabettus:"sunset",filopappou:"sunset",areopag:"sunset",a4athens:"bar",couleur:"bar",galaxy:"bar",wache:"guard",akromuseum:"amuseum",
+ mitropoli:"street",mets:"street",pangrativiertel:"street",koukakiviertel:"street",friedhof:"local",akademie:"local",romantso:"bar"};
 function kindOf(it){return KIND_OVR[it.id]||({sight:"site",museum:"museum",view:"view",cafe:"cafe",food:"food",bar:"bar",act:"act",trip:"trip"})[it.c]||"act";}
 const CURVE={
  site:[0,0,0,0,0,0,0,0,1,2,3,3,3,2,2,1,1,1,0,0,0,0,0,0],museum:[0,0,0,0,0,0,0,0,0,1,2,3,2,2,1,1,1,1,1,1,0,0,0,0],
@@ -168,11 +182,11 @@ function routeEditor(r,ds,m){const all=stopsPts(r);let gi=0;
   </div>`;}
 
 /* ===================== TAGESVORSCHLAG ===================== */
-const DT_DEF={day:"",start:"09:00",hours:9,tempo:"normal",lunch:true,lunchAt:"14:00",coffee:true,dinner:true,interests:["antike","museen","aussicht","viertel"],mode:"walk",from:"center",events:true,seed:1};
+const DT_DEF={day:"",start:"09:00",hours:9,tempo:"normal",breakfast:false,lunch:true,lunchAt:"14:00",coffee:true,dinner:true,interests:["antike","museen","aussicht","viertel"],mode:"walk",from:"center",events:true,seed:1};
 S.dt=Object.assign({},DT_DEF,S.dt||{});
 const CENTER={id:"start",n:"Syntagma-Platz",lat:37.9755,lon:23.7348};
 const PRIO={akropolis:10,akromuseum:9,agora:8,nam:8,plaka:7,lykabettus:7,filopappou:6,monastiraki:6,kykladen:6,benaki:6,anafiotika_cats:6,stadion:5,romagora:5,wache:5,areopag:5,varvakios:5,byzmuseum:5,laiki:6,
-  olympieion:4,garten:4,herodes:4,hadrian:3,kerameikos:4,strefi:4,pnyx:4,streetart:5,ermou:4,instrumente:4,nationalgalerie:5,emst:4,hammam:3,snfcc:5,mikrolimano:3,kypseli:3,planetarium:3,technopolis:3};
+  olympieion:4,garten:4,herodes:4,hadrian:3,kerameikos:4,strefi:4,pnyx:4,streetart:5,ermou:4,instrumente:4,nationalgalerie:5,emst:4,hammam:3,snfcc:5,mikrolimano:3,kypseli:3,planetarium:3,technopolis:3,mitropoli:4,numismatik:4,beyhammam:3,friedhof:3,mets:3,koukakiviertel:3,pangrativiertel:3,akademie:2,kriegsmuseum:3,romantso:2};
 const INTERESTS=[["antike","Antike","landmark"],["museen","Museen","museum"],["aussicht","Aussicht","mountain"],["viertel","Viertel & Märkte","pin"],["aktiv","Aktivitäten","ticket"],["ausgehen","Ausgehen","wine"]];
 function matchInterest(it,ints){const k=kindOf(it);
   return (ints.includes("antike")&&it.c==="sight"&&(it.eu25||["stadion","herodes","anafiotika_cats"].includes(it.id)))||
@@ -186,7 +200,8 @@ function seasonOff(it){return it.season&&!months().some(m=>it.season.includes(m)
 function startPt(o){if(o.from==="me"&&ME)return {id:"start",n:"Mein Standort",lat:ME.lat,lon:ME.lon};if(o.from==="home"&&S.home)return {id:"start",n:"Unterkunft",lat:S.home.lat,lon:S.home.lon};return CENTER;}
 function genDay(o){const day=o.day||days()[0];const T={entspannt:{buf:20,f:1.15},normal:{buf:10,f:1},straff:{buf:5,f:.85}}[o.tempo]||{buf:10,f:1};
   const R=rng(o.seed||1);let t=toMin(o.start);const end=t+o.hours*60;let pos=startPt(o);const used=new Set();const out=[];const ss=sunsetMin(day);const warns=[];
-  const pz=[];if(o.lunch)pz.push({k:"lunch",at:toMin(o.lunchAt),dur:60,cat:"food",n:"Mittagessen"});
+  const pz=[];if(o.breakfast&&toMin(o.start)<=11*60)pz.push({k:"breakfast",at:toMin(o.start),dur:45,cat:"cafe",tag:"fruehstueck",n:"Frühstück"});
+  if(o.lunch)pz.push({k:"lunch",at:toMin(o.lunchAt),dur:60,cat:"food",n:"Mittagessen"});
   if(o.coffee)pz.push({k:"coffee",at:Math.max(toMin(o.lunchAt)+150,16*60),dur:30,cat:"cafe",n:"Kaffeepause"});
   if(o.dinner)pz.push({k:"dinner",at:Math.max(20*60+30,toMin(o.lunchAt)+360),dur:90,cat:"food",n:"Abendessen"});
   const pauses=pz.filter(p=>p.at>=t-30&&p.at+p.dur<=end+30);
@@ -199,7 +214,7 @@ function genDay(o){const day=o.day||days()[0];const T={entspannt:{buf:20,f:1.15}
     if(ev){const c=legCost(pos,ev.ev,o.mode);if(t+c.min+T.buf>=ev.at-20){go(ev.ev);const arr=t+c.min;if(ev.at>arr+5)out.push({type:"free",start:arr,end:ev.at});const len=Math.min(150,end-ev.at);
         out.push({type:"event",it:ev.ev,start:ev.at,end:ev.at+len});t=ev.at+len;pos=ev.ev;ev.done=true;continue;}}
     const p=pauses.find(x=>!x.done&&t>=x.at-25);
-    if(p){p.done=true;const cands=ITEMS.filter(i=>hasGeo(i)&&i.c===p.cat&&dietOk(i)&&!used.has(i.id)).map(i=>{const c=legCost(pos,i,o.mode);const arr=t+c.min;return {i,c,arr,s:(openAt(i,day,arr)&&openAt(i,day,arr+p.dur-1)?0:50)+c.min+crowd(i,day,arr)*4+R()*6};}).sort((a,b)=>a.s-b.s);
+    if(p){p.done=true;const cands=ITEMS.filter(i=>hasGeo(i)&&i.c===p.cat&&(!p.tag||(i.k||[]).includes(p.tag))&&(p.k!=="coffee"||(i.k||[]).some(x=>x==="kaffee"||x==="suess"))&&dietOk(i)&&!used.has(i.id)).map(i=>{const c=legCost(pos,i,o.mode);const arr=t+c.min;return {i,c,arr,s:(openAt(i,day,arr)&&openAt(i,day,arr+p.dur-1)?0:50)+c.min+crowd(i,day,arr)*4+R()*6};}).sort((a,b)=>a.s-b.s);
       const best=cands[0];if(best&&best.s<50){go(best.i);out.push({type:"pause",k:p.k,n:p.n,it:best.i,start:best.arr,end:best.arr+p.dur});used.add(best.i.id);t=best.arr+p.dur;pos=best.i;}
       else{out.push({type:"pause",k:p.k,n:p.n,start:t,end:t+p.dur});t+=p.dur;}continue;}
     const nextP=pauses.find(x=>!x.done),nextE=fixed.find(f=>!f.done);
@@ -259,7 +274,7 @@ function renderSuggest(el){const ds=days();const o=S.dt;if(!ds.includes(o.day))o
     <div class="row">${!S.home?`<button class="btn ghost" data-act="sethome">${ic("home")}Aktuellen Standort als Unterkunft</button>`:`<button class="btn ghost" data-act="clearhome">${ic("home")}Unterkunft gespeichert · entfernen</button>`}</div>
     <div class="seg" role="group" aria-label="Verkehrsmittel">${[["walk","Zu Fuß"],["transit","Öffis"],["car","Auto"]].map(x=>`<button data-act="dt-mode" data-mode2="${x[0]}" aria-pressed="${o.mode===x[0]}">${x[1]}</button>`).join("")}</div>
     <div><div class="flabel">Was interessiert dich?</div><div class="chips wrapchips">${INTERESTS.map(([k,l,i])=>`<button class="chip" data-act="dt-int" data-k="${k}" aria-pressed="${o.interests.includes(k)}">${ic(i)}${l}</button>`).join("")}</div></div>
-    <div><div class="flabel">Pausen & Events</div><div class="chips wrapchips">${[["lunch","Mittagessen"],["coffee","Kaffeepause"],["dinner","Abendessen"],["events","Events des Tages"]].map(([k,l])=>`<button class="chip" data-act="dt-flag" data-k="${k}" aria-pressed="${!!o[k]}">${l}</button>`).join("")}</div></div>
+    <div><div class="flabel">Pausen & Events</div><div class="chips wrapchips">${[["breakfast","Frühstück"],["lunch","Mittagessen"],["coffee","Kaffeepause"],["dinner","Abendessen"],["events","Events des Tages"]].map(([k,l])=>`<button class="chip" data-act="dt-flag" data-k="${k}" aria-pressed="${!!o[k]}">${l}</button>`).join("")}</div></div>
    </div>
    ${g.warns.map(w=>`<div class="notice warn">${ic("alert")}<span>${esc(w)}</span></div>`).join("")}
    ${S.rain?`<div class="notice rain">${ic("umbrella")}<span>Regentag aktiv: nur Ziele drinnen oder teilweise überdacht.</span></div>`:""}

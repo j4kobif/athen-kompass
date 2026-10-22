@@ -1,6 +1,6 @@
 /* ===================== STATE ===================== */
 const K="athen-kompass-v1";
-const DEF={start:"2026-11-05",end:"2026-11-09",rain:false,veg:true,vegan:false,lf:true,plan:{},cats:[],q:"",mode:"walk",routeDay:"all",tab:"entdecken",sample:true,view:"list",sort:"top"};
+const DEF={start:"2026-11-05",end:"2026-11-09",rain:false,veg:true,vegan:false,lf:true,plan:{},cats:[],q:"",mode:"walk",routeDay:"all",tab:"entdecken",sample:true,view:"list",sort:"top",kueche:""};
 let S=Object.assign({},DEF);
 try{const raw=localStorage.getItem(K);if(raw)S=Object.assign({},DEF,JSON.parse(raw));}catch(e){}
 function save(){try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}}
@@ -107,10 +107,17 @@ function planBtn(id,day){return inPlan(id)?`<button class="btn added" data-plan=
 /* ===================== ENTDECKEN ===================== */
 let hlId=null;
 function filteredItems(){const q=S.q.trim().toLowerCase();return ITEMS.filter(it=>{
-  if(S.cats.length&&!S.cats.includes(it.c))return false;
-  if(q&&!(it.n+" "+it.a+" "+it.d).toLowerCase().includes(q))return false;
+  const eat=it.c==="food"||it.c==="cafe",eatSel=S.cats.some(c=>c==="food"||c==="cafe");
+  if(S.cats.length&&!S.cats.includes(it.c)&&!(S.kueche&&eat&&eatSel))return false;
+  if(q&&!(it.n+" "+it.a+" "+it.d+" "+(it.k||[]).map(x=>KLABEL[x]).join(" ")).toLowerCase().includes(q))return false;
+  if(S.kueche&&S.cats.some(c=>c==="food"||c==="cafe")&&(it.c==="food"||it.c==="cafe")&&!kOk(it,S.kueche))return false;
   if((it.c==="food"||it.c==="cafe")&&it.diet&&S.vegan&&!it.diet.vegan)return false;
   return true;});}
+function kOk(it,k){if(k==="vegan")return it.diet&&it.diet.vegan==="all";return (it.k||[]).includes(k);}
+function kChips(scope){const list=ITEMS.filter(i=>i.c==="food"||i.c==="cafe");
+  const opts=[["","Alle"],...KUECHE.map(k=>[k[0],k[1],k[2]]),["vegan","100 % vegan","leaf"]].filter(o=>!o[0]||list.some(i=>kOk(i,o[0])));
+  return `<div class="chips" role="group" aria-label="Küche">${opts.map(([k,l,icn])=>`<button class="chip" data-kueche="${k}" aria-pressed="${(S.kueche||"")===k}">${icn?ic(icn):""}${l}${k?` <small class="cnt">${list.filter(i=>kOk(i,k)&&(!S.vegan||i.diet?.vegan)).length}</small>`:""}</button>`).join("")}</div>`;}
+function kBadges(it){return (it.k||[]).map(k=>`<span class="b kb">${KLABEL[k]}</span>`).join("");}
 function isDim(it){if(S.rain&&it.in===false)return true;if(it.season&&!months().some(m=>it.season.includes(m)))return true;return false;}
 function itemCard(it){const cat=catOf(it);const dim=isDim(it);
   const seasonOff=it.season&&!months().some(m=>it.season.includes(m));
@@ -121,7 +128,7 @@ function itemCard(it){const cat=catOf(it);const dim=isDim(it);
   return `<article class="card${dim?" dim":""}${hlId===it.id?" hl":""}" id="card-${it.id}" style="--cc:var(${cat.c})">
    <div class="card-h">${tile(it)}<div class="t"><div class="cat">${cat.n}</div><h3>${esc(it.n)}</h3>
    <div class="meta"><span>${esc(it.a)}</span>${dur?`<span class="dur" title="Geschätzte Aufenthaltsdauer vor Ort">${ic("clock")}ca. ${dur} vor Ort</span>`:""}</div></div></div>
-   <div class="badges">${priceBadge(it.p)}${inBadge(it)}${it.eu25?'<span class="b free">EU unter 25: frei</span>':""}${dietBadges(it)}${seasonOff?'<span class="b warn">im Zeitraum geschlossen</span>':""}${closedDays?`<span class="b warn">${closedDays} geschlossen</span>`:""}</div>
+   <div class="badges">${kBadges(it)}${priceBadge(it.p)}${inBadge(it)}${it.eu25?'<span class="b free">EU unter 25: frei</span>':""}${dietBadges(it)}${seasonOff?'<span class="b warn">im Zeitraum geschlossen</span>':""}${closedDays?`<span class="b warn">${closedDays} geschlossen</span>`:""}</div>
    ${distRow(it)}
    <p>${esc(it.d)}</p>
    ${hoursCrowd(it)}
@@ -152,6 +159,7 @@ function renderDiscover(){const el=$("#p-entdecken");const list=filteredItems();
    ${S.rain?`<div class="notice rain">${ic("umbrella")}<span><b>Regentag:</b> Drinnen-Ziele stehen oben. Bei Outdoor-Zielen siehst du eine Alternative. Akropolis und Areopag sind bei Nässe wegen der glatten Marmorflächen unangenehm.</span></div>`:""}
    <div class="searchbox">${ic("search")}<input id="q" type="search" placeholder="Suchen, z. B. Plaka, vegan, Museum" value="${esc(S.q)}" aria-label="Suchen"></div>
    <div class="chips" role="group" aria-label="Kategorien"><button class="chip" data-cat="" aria-pressed="${S.cats.length===0}">Alle</button>${chips}</div>
+   ${S.cats.some(c=>c==="food"||c==="cafe")?kChips():""}
    <div class="row" style="justify-content:space-between">${ME&&S.view!=="map"?`<div class="seg" role="group" aria-label="Sortierung"><button data-sort="top" aria-pressed="${!near}">Empfohlen</button><button data-sort="near" aria-pressed="${near}">${ic("locate")}Nähe</button></div>`:`<small style="color:var(--muted)">${list.length} Orte${ME?"":" · Standort oben aktivieren für Wegzeiten"}</small>`}<div class="seg" role="group" aria-label="Ansicht"><button data-view="list" aria-pressed="${S.view!=="map"}">${ic("list")}Liste</button><button data-view="map" aria-pressed="${S.view==="map"}">${ic("map")}Karte</button></div></div>
    ${S.view==="map"?`<div class="mapbox">${mapSVG(list,{hl:hlId,dimIds})}${mapCaption()}</div>${sel?itemCard(sel):`<div class="tip" style="text-align:center">Tippe auf einen Punkt für Details.</div>`}`
    :`<div class="list">${sorted.length?sorted.map(itemCard).join(""):`<div class="empty">${ic("search")}Keine Treffer. Filter zurücksetzen?</div>`}</div>`}`;
@@ -191,12 +199,13 @@ function renderFood(){const el=$("#p-essen");
   let dishes=DISHES.filter(x=>(!S.veg||x.veg)&&(!S.vegan||x.vegan));
   dishes=[...dishes].sort((a,b)=>(S.lf?a.milk-b.milk:0));
   const milkBadge=x=>x.milk===0?'<span class="b veg">ohne Milch</span>':x.milk===1?'<span class="b milk">Milch je nach Variante</span>':'<span class="b milk">enthält Milchprodukte</span>';
-  const places=ITEMS.filter(i=>(i.c==="food"||i.c==="cafe")&&(!S.vegan||i.diet?.vegan));
+  const places=ITEMS.filter(i=>(i.c==="food"||i.c==="cafe")&&(!S.vegan||i.diet?.vegan)&&(!S.kueche||kOk(i,S.kueche)))
+    .sort((a,b)=>ME?((hasGeo(a)?hav(ME,a):1e4)-(hasGeo(b)?hav(ME,b):1e4)):0);
   el.innerHTML=`<div class="ptitle"><h2>Essen</h2><small>${[S.vegan?"vegan":S.veg?"vegetarisch":"",S.lf?"laktosefrei":""].filter(Boolean).join(" · ")}</small></div>
    <p class="lede">Die griechische Küche hat viele Gemüse- und Hülsenfruchtgerichte, die von Haus aus vegan sind. Das Wort dafür: <b style="font-family:var(--f-display);font-size:1.12em;color:var(--ink)">νηστίσιμο</b> (nistísimo), Fastenessen ohne Fleisch, Milch und Ei.${fastingActive()?" In deinem Zeitraum beginnt am 15. November die Weihnachtsfastenzeit, dann gibt es besonders viel davon.":""}</p>
    ${S.lf?`<div class="notice warn">${ic("alert")}<span><b>Laktose:</b> Feta, Joghurt und Béchamel stecken in vielen Klassikern. Gerichte ohne Milch stehen oben. Satz zum Zeigen: <b>Έχω δυσανεξία στη λακτόζη</b>.</span></div>`:""}
    <section class="block"><h2>Gerichte, die du probieren solltest</h2><div class="grid">${dishes.map(x=>`<article class="card" style="--cc:var(--c-food)"><div class="card-h"><div class="tile s" style="--cc:var(${x.vegan?"--c-food":"--c-view"})">${ic("leaf")}</div><div class="t"><h3>${esc(x.n)}</h3><div class="meta" style="font-family:var(--f-display);font-size:.98rem">${x.g}</div></div></div><div class="badges">${x.vegan?'<span class="b veg">vegan</span>':'<span class="b veg">vegetarisch</span>'}${milkBadge(x)}</div><p>${esc(x.d)}</p>${x.note?`<div class="tip"><b>Tipp:</b> ${esc(x.note)}</div>`:""}</article>`).join("")}</div></section>
-   <section class="block"><h2>Wo essen</h2><div class="list">${places.map(itemCard).join("")}</div></section>
+   <section class="block" id="woessen"><div class="ptitle"><h2 style="font-size:1.15rem">Wo essen</h2><small>${places.length} Lokale${ME?" · nach Nähe":""}</small></div>${kChips()}<div class="list">${places.length?places.map(itemCard).join(""):`<div class="empty">${ic("utensils")}Keine Lokale in dieser Kategorie${S.vegan?" mit veganem Angebot":""}.</div>`}</div></section>
    <section class="block"><h2>Sprachhilfe fürs Bestellen</h2><div class="phr">${PHRASES.map(p=>`<div><span class="g">${p[0]}</span><span class="l">${p[1]}</span><span class="de">${p[2]}</span></div>`).join("")}</div></section>`;}
 
 /* ===================== ROUTING ===================== */
@@ -361,7 +370,7 @@ function renderAll(){syncControls();renderDiscover();renderEvents();renderFood()
 function openSheet(o){$("#sheet").hidden=!o;$("#scrim").hidden=!o;if(o)$("#dStart").focus();else $("#openSettings").focus();}
 
 document.addEventListener("click",e=>{
-  const t=e.target.closest("#locBtn,#locBtn2,[data-sort],[data-tab],[data-cat],[data-plan],[data-goto],[data-mode],[data-view],.marker,#clearPlan,#openSettings,#closeSettings,#doneSettings,#scrim");if(!t)return;
+  const t=e.target.closest("#locBtn,#locBtn2,[data-sort],[data-kueche],[data-tab],[data-cat],[data-plan],[data-goto],[data-mode],[data-view],.marker,#clearPlan,#openSettings,#closeSettings,#doneSettings,#scrim");if(!t)return;
   if(t.id==="locBtn"){locate();return;}
   if(t.id==="locBtn2"){S.routeStart="me";save();locate();return;}
   if(t.dataset.sort){S.sort=t.dataset.sort;save();renderDiscover();return;}
@@ -369,6 +378,7 @@ document.addEventListener("click",e=>{
   if(t.id==="closeSettings"||t.id==="doneSettings"||t.id==="scrim"){openSheet(false);return;}
   if(t.dataset.tab){setTab(t.dataset.tab);return;}
   if(t.dataset.view){S.view=t.dataset.view;save();renderDiscover();return;}
+  if(t.dataset.kueche!==undefined){S.kueche=t.dataset.kueche;save();renderDiscover();renderFood();return;}
   if(t.dataset.cat!==undefined){const c=t.dataset.cat;if(!c)S.cats=[];else S.cats=S.cats.includes(c)?S.cats.filter(x=>x!==c):[...S.cats,c];save();renderDiscover();return;}
   if(t.dataset.plan){togglePlan(t.dataset.plan,t.dataset.day);return;}
   if(t.dataset.mode){S.mode=t.dataset.mode;save();renderPlan();return;}
