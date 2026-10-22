@@ -348,6 +348,23 @@ textarea.note{width:100%;min-width:0;border:1px solid var(--line);background:var
 .stats{grid-template-columns:repeat(4,minmax(0,1fr))!important}
 .seg.wide{grid-template-columns:repeat(4,minmax(0,1fr))!important}
 .seg.wide button{padding:9px 2px;font-size:.8rem}
+/* routenende */
+.endbox{display:flex;flex-direction:column;gap:8px}
+.rlabel{font-size:.74rem;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+.seg.wide2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%}
+.seg.wide2 button{flex-direction:column;justify-content:center;gap:0;padding:7px 4px;line-height:1.2}
+.seg.wide2 button small{font-family:var(--f-mono);font-size:.7rem;color:var(--muted);font-weight:500}
+.srow .ord{width:20px;text-align:center;font-family:var(--f-mono);font-size:.8rem;color:var(--muted);flex:none}
+.seg.wide3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%}
+.seg.wide3 button{flex-direction:column;justify-content:center;gap:0;padding:7px 4px;line-height:1.2}
+.seg.wide3 button small{font-family:var(--f-mono);font-size:.7rem;color:var(--muted);font-weight:500}
+.leg .no svg.i{width:14px;height:14px;stroke-width:2.5}
+.tl-item.finish .cat{display:inline-flex;align-items:center;gap:4px}.tl-item.finish .cat svg.i{width:12px;height:12px}
+/* eigene zeiten */
+.durrow{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:.8rem;color:var(--muted)}
+.meta .dur.own{color:var(--accent);font-weight:700}
+.tl-dur{margin-top:4px}.tl-dur .sel{font-size:.72rem;padding:3px 8px}
+.srow .sel.small{max-width:96px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--navh) + 14px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:.85rem;font-weight:600;z-index:40;opacity:0;transition:opacity .2s;pointer-events:none;max-width:calc(100% - 32px);text-align:center}
 .toast.show{opacity:1}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
@@ -918,7 +935,7 @@ function mapSVG(points,{route=null,hl=null,dimIds=new Set()}={}){
   let g=baseMap();
   if(route&&route.length>1){const pts=route.filter(onMap).map(r=>prj(r.lat,r.lon).map(v=>v.toFixed(1)).join(",")).join(" ");
     g+=`<polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="3.5" stroke-dasharray="1 7" stroke-linecap="round"/>`;}
-  points.filter(onMap).filter(it=>it.id!=="me").forEach(it=>{const [x,y]=prj(it.lat,it.lon);const col=`var(${catOf(it).c})`;
+  points.filter(onMap).filter(it=>it.id!=="me"&&!it._loop).forEach(it=>{const [x,y]=prj(it.lat,it.lon);const col=it._end?"var(--accent)":`var(${catOf(it).c})`;
     const cls=["marker",dimIds.has(it.id)?"dim":"",hl===it.id?"hl":""].join(" ");
     const num=it._no?`<text x="${x.toFixed(1)}" y="${(y+3.5).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="800" fill="var(--bg)" font-family="Commissioner,sans-serif">${it._no}</text>`:"";
     g+=`<g class="${cls}" data-id="${it.id}" tabindex="0" role="button" aria-label="${esc(it.n)}"><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${it._no?10:hl===it.id?9:7}" fill="${col}"/>${num}<title>${esc(it.n)}</title></g>`;});
@@ -946,16 +963,22 @@ function kChips(scope){const list=ITEMS.filter(i=>i.c==="food"||i.c==="cafe");
   const opts=[["","Alle"],...KUECHE.map(k=>[k[0],k[1],k[2]]),["vegan","100 % vegan","leaf"]].filter(o=>!o[0]||list.some(i=>kOk(i,o[0])));
   return `<div class="chips" role="group" aria-label="Küche">${opts.map(([k,l,icn])=>`<button class="chip" data-kueche="${k}" aria-pressed="${(S.kueche||"")===k}">${icn?ic(icn):""}${l}${k?` <small class="cnt">${list.filter(i=>kOk(i,k)&&(!S.vegan||i.diet?.vegan)).length}</small>`:""}</button>`).join("")}</div>`;}
 function kBadges(it){return (it.k||[]).map(k=>`<span class="b kb">${KLABEL[k]}</span>`).join("");}
+// Eigene Zeit pro Aktivität (S.durs[id] in Minuten), sonst Vorschlag aus den Daten
+function durOf(it){const v=S.durs&&S.durs[it.id];return v||it.dur||45;}
+function fmtDur(m){return m>=60?(Math.round(m/15)/4).toString().replace(".",",")+" h":m+" Min.";}
+function durSelect(it,id,cls){const cur=S.durs&&S.durs[it.id]||"";const sug=it.dur||45;const max=it.c==="trip"?720:360;
+  const vals=[15,20,30,45,60,75,90,120,150,180,240,300,360,480,600,720].filter(v=>v<=max);if(cur&&!vals.includes(cur))vals.push(cur);vals.sort((a,b)=>a-b);
+  return `<select class="sel small${cls?" "+cls:""}" id="${id}" data-dur="${it.id}" aria-label="Zeit einplanen für ${esc(it.n)}"><option value="">⏱ Vorschlag: ${fmtDur(sug)}</option>${vals.map(v=>`<option value="${v}"${+cur===v?" selected":""}>⏱ ${fmtDur(v)}${v===sug?" (Vorschlag)":""}</option>`).join("")}</select>`;}
 function isDim(it){if(S.rain&&it.in===false)return true;if(it.season&&!months().some(m=>it.season.includes(m)))return true;return false;}
 function itemCard(it){const cat=catOf(it);const dim=isDim(it);
   const seasonOff=it.season&&!months().some(m=>it.season.includes(m));
   const closedDays=(it.closed||[]).map(x=>WDL[x]).join(", ");
   const alt=S.rain&&it.in===false&&it.alt?byId(it.alt):null;
   const fd=freeDays();const freeHit=it.eu25?Object.keys(fd).filter(k=>fd[k].includes("staatliche")).map(k=>fmt(k)).join(", "):"";
-  const dur=it.dur?(it.dur>=60?(Math.round(it.dur/30)/2).toString().replace(".",",")+" h":it.dur+" Min."):"";
+  const own=S.durs&&S.durs[it.id];const dur=own?fmtDur(own):it.dur?fmtDur(it.dur):"";
   return `<article class="card${dim?" dim":""}${hlId===it.id?" hl":""}" id="card-${it.id}" style="--cc:var(${cat.c})">
    <div class="card-h">${tile(it)}<div class="t"><div class="cat">${cat.n}</div><h3>${esc(it.n)}</h3>
-   <div class="meta"><span>${esc(it.a)}</span>${dur?`<span class="dur" title="Geschätzte Aufenthaltsdauer vor Ort">${ic("clock")}ca. ${dur} vor Ort</span>`:""}</div></div></div>
+   <div class="meta"><span>${esc(it.a)}</span>${dur?`<span class="dur${own?" own":""}" title="${own?"Deine eingeplante Zeit":"Geschätzte Aufenthaltsdauer vor Ort"}">${ic("clock")}${own?`${dur} eingeplant`:`ca. ${dur} vor Ort`}</span>`:""}</div></div></div>
    <div class="badges">${doneBadge(it.id)}${kBadges(it)}${priceBadge(it.p)}${inBadge(it)}${it.eu25?'<span class="b free">EU unter 25: frei</span>':""}${dietBadges(it)}${seasonOff?'<span class="b warn">im Zeitraum geschlossen</span>':""}${closedDays?`<span class="b warn">${closedDays} geschlossen</span>`:""}</div>
    ${distRow(it)}
    <p>${esc(it.d)}</p>
@@ -965,6 +988,7 @@ function itemCard(it){const cat=catOf(it);const dim=isDim(it);
    ${freeHit?`<div class="tip"><b>Gratis in deinem Zeitraum:</b> ${freeHit}</div>`:""}
    ${alt?`<div class="altline">${ic("umbrella")}<span>Bei Regen besser: <button data-goto="${alt.id}">${esc(alt.n)}</button>${alt.p&&alt.p.t?" · "+esc(alt.p.t):""}</span></div>`:""}
    <div class="actions">${planBtn(it.id)}<a class="btn" href="${mapsLink(it)}" target="_blank" rel="noopener">${ic("pin")}Karte</a>${it.url?`<a class="btn ghost" href="${esc(it.url)}" target="_blank" rel="noopener">${ic("ext")}Website</a>`:""}</div>
+   <div class="durrow"><span>Zeit vor Ort einplanen</span>${durSelect(it,"dur-"+it.id)}</div>
    ${diaryBlock(it)}
   </article>`;}
 function heroHtml(){const ds=days();const t=todayIso();const h=new Date().getHours();
@@ -1058,6 +1082,22 @@ function optimize(pts,startId){if(pts.length<3)return pts;
   const len=o=>o.reduce((s,p,i)=>i?s+hav(o[i-1],p):0,0);let improved=true,guard=0;
   while(improved&&guard++<60){improved=false;for(let i=1;i<order.length-1;i++)for(let k=i+1;k<order.length;k++){const n=[...order.slice(0,i),...order.slice(i,k+1).reverse(),...order.slice(k+1)];if(len(n)+1e-9<len(order)){order.splice(0,order.length,...n);improved=true;}}}
   return order;}
+// Route mit festem Ende: tail = Startpunkt (Rundweg) oder ein Zielort; Start bleibt fix
+function optimizeTo(pts,startId,tail){if(!tail)return optimize(pts,startId);
+  const start=pts.find(p=>p.id===startId)||pts[0];if(!start)return [];const rest=pts.filter(p=>p!==start&&!(tail.id&&p.id===tail.id));const order=[start];
+  while(rest.length){const last=order[order.length-1];let bi=0,bd=1e9;rest.forEach((p,i)=>{const dd=hav(last,p)+0.35*hav(p,tail);if(dd<bd){bd=dd;bi=i;}});order.push(rest.splice(bi,1)[0]);}
+  const len=o=>o.reduce((s,p,i)=>i?s+hav(o[i-1],p):0,0)+hav(o[o.length-1],tail);let improved=true,guard=0;
+  while(improved&&guard++<60){improved=false;for(let i=1;i<order.length-1;i++)for(let k=i+1;k<order.length;k++){const n=[...order.slice(0,i),...order.slice(i,k+1).reverse(),...order.slice(k+1)];if(len(n)+1e-9<len(order)){order.splice(0,order.length,...n);improved=true;}}}
+  return order;}
+function endChoices(){const g=[];if(S.home)g.push(["home","🏠 Unterkunft"]);if(ME)g.push(["me","📍 Mein Standort (jetzt)"]);return g;}
+function endOptions(sel,extraIds){const groups={};ITEMS.filter(hasGeo).forEach(i=>{(groups[i.c]=groups[i.c]||[]).push(i);});
+  const top=endChoices().map(([k,l])=>`<option value="${k}"${sel===k?" selected":""}>${l}</option>`).join("");
+  const plan=(extraIds||[]).map(byId).filter(hasGeo);
+  return `<option value="">Ziel wählen …</option>${top}${plan.length?`<optgroup label="Aus deinem Plan">${plan.map(i=>`<option value="${i.id}"${sel===i.id?" selected":""}>${esc(i.n)}</option>`).join("")}</optgroup>`:""}`+
+    Object.entries(groups).map(([c,l])=>`<optgroup label="${CATS[c].n}">${l.map(i=>`<option value="${i.id}"${sel===i.id&&!plan.includes(i)?" selected":""}>${esc(i.n)}</option>`).join("")}</optgroup>`).join("");}
+function resolvePoint(id){if(!id)return null;if(id==="home"&&S.home)return {id:"home",n:"Unterkunft",lat:S.home.lat,lon:S.home.lon,dur:0};
+  if(id==="me"&&ME)return {id:"me",n:"Mein Standort",lat:ME.lat,lon:ME.lon,dur:0};const it=byId(id);return it&&hasGeo(it)?it:null;}
+function pathCost(list,mode){let km=0,min=0;for(let i=1;i<list.length;i++){const c=legCost(list[i-1],list[i],mode);km+=c.km;min+=c.min;}return {km,min};}
 function segDist(p,a,b){const kx=111.32*Math.cos(p.lat*Math.PI/180),ky=110.57;const ax=a.lon*kx,ay=a.lat*ky,bx=b.lon*kx,by=b.lat*ky,px=p.lon*kx,py=p.lat*ky;const dx=bx-ax,dy=by-ay;const L=dx*dx+dy*dy;let t=L?((px-ax)*dx+(py-ay)*dy)/L:0;t=Math.max(0,Math.min(1,t));return Math.hypot(px-(ax+t*dx),py-(ay+t*dy));}
 function onTheWay(order,mode){const lim=mode==="walk"?0.25:mode==="car"?0.8:0.4;const ids=new Set(order.map(o=>o.id));const out=[];
   ITEMS.filter(i=>hasGeo(i)&&!ids.has(i.id)&&i.c!=="trip").forEach(i=>{let best=1e9;for(let k=1;k<order.length;k++)best=Math.min(best,segDist(i,order[k-1],order[k]));if(order.length===1)best=hav(i,order[0]);if(best<=lim&&!(S.rain&&i.in===false))out.push([i,best]);});
@@ -1069,7 +1109,7 @@ function legLink(a,b,mode){const tm={walk:"walking",car:"driving",transit:"trans
 const kmf=v=>v.toFixed(1).replace(".",",");
 
 /* ===================== PLAN (Tripliste) ===================== */
-let LAST_ORDER=null;
+let LAST_ORDER=null;const LAST_AUTO={};
 function renderPlanList(el){const ds=days();const ids=Object.keys(S.plan).filter(byId);
   if(!ids.length){el.innerHTML=`<div class="empty">${ic("route")}<span>Dein Plan ist leer. Füge unter <b>Entdecken</b> oder <b>Events</b> Ziele hinzu oder lass dir einen <b>Tagesvorschlag</b> machen.</span><button class="btn primary" data-tab="entdecken">${ic("compass")}Ziele entdecken</button></div>`;LAST_ORDER=null;return;}
   const dayOpts=sel=>`<option value="">Ohne Tag</option>`+ds.map(x=>`<option value="${x}"${sel===x?" selected":""}>${fmt(x)}</option>`).join("");
@@ -1089,37 +1129,78 @@ function renderPlanList(el){const ds=days();const ids=Object.keys(S.plan).filter
   const routeDays=["all",...order.filter(x=>x)];if(!routeDays.includes(S.routeDay))S.routeDay="all";
   let pts=ids.map(byId).filter(hasGeo).filter(it=>S.routeDay==="all"||S.plan[it.id].day===S.routeDay);
   if(S.mode==="walk")pts=pts.filter(p=>p.c!=="trip");
-  const cand=pts;const meObj=ME?{id:"me",n:"Mein Standort",lat:ME.lat,lon:ME.lon,dur:0,a:""}:null;
-  if(meObj&&S.routeStart==="me")pts=[meObj,...pts];
+  const cand=pts;const meObj=ME?{id:"me",n:"Mein Standort",lat:ME.lat,lon:ME.lon,dur:0,a:""}:null;const homeObj=S.home?{id:"home",n:"Unterkunft",lat:S.home.lat,lon:S.home.lon,dur:0,a:""}:null;
+  if(meObj&&S.routeStart==="me")pts=[meObj,...pts];if(homeObj&&S.routeStart==="home")pts=[homeObj,...pts];
   const startSel=S.routeStart&&pts.find(p=>p.id===S.routeStart)?S.routeStart:(pts[0]&&pts[0].id);
-  const ordered=optimize(pts,startSel);ordered.forEach((p,i)=>p._no=i+1);
+  // Routenende: offen | Rundweg | Ziel
+  if(!S.routeEnd)S.routeEnd="open";
+  const startObj=pts.find(p=>p.id===startSel);
+  const endPoint=S.routeEnd==="ziel"?resolvePoint(S.routeEndId):null;
+  // Reihenfolge: optimiert (auto) oder selbst festgelegt (manual, je Tag in S.manual gespeichert)
+  const manual=S.routeOrder==="manual";if(!S.manual)S.manual={};const mkey=S.routeDay||"all";
+  const manualSeq=()=>{const ids=(S.manual[mkey]||[]).filter(id=>cand.some(p=>p.id===id));cand.forEach(p=>{if(!ids.includes(p.id))ids.push(p.id);});return ids.map(id=>cand.find(p=>p.id===id));};
+  const baseStart=["me","home"].includes(startSel)?pts[0]:null;
+  const buildManual=(mode)=>{let seq=manualSeq();if(mode==="ziel"&&endPoint)seq=seq.filter(p=>p.id!==endPoint.id);const o=baseStart?[baseStart,...seq]:seq;if(!o.length)return null;const s0=o[0];
+    if(mode==="loop")return [...o,Object.assign({},s0,{id:"_back",n:`Zurück zum Start: ${s0.n}`,dur:0,_end:true,_loop:true})];
+    if(mode==="ziel"&&endPoint)return [...o,Object.assign(Object.create(endPoint),{id:endPoint.id,_end:true,dur:0})];return o;};
+  const variantAuto=(mode)=>{if(!startObj)return null;if(mode==="loop"){const back=Object.assign({},startObj,{id:"_back",n:`Zurück zum Start: ${startObj.n}`,dur:0,_end:true,_loop:true});const o=optimizeTo(pts,startSel,startObj);return [...o,back];}
+    if(mode==="ziel"&&endPoint){const tail=Object.assign(Object.create(endPoint),{id:endPoint.id,_end:true,dur:0});const o=optimizeTo(pts,startSel,endPoint);return [...o,tail];}
+    return optimize(pts,startSel);};
+  const variant=m=>manual?buildManual(m):variantAuto(m);
+  const effEnd=S.routeEnd==="ziel"&&!endPoint?"open":S.routeEnd;
+  const vOpen=variant("open"),vLoop=variant("loop");
+  const autoOrd=variantAuto(effEnd)||[];LAST_AUTO[mkey]=autoOrd.filter(p=>!p._end&&!["me","home"].includes(p.id)).map(p=>p.id);
+  const ordered=variant(effEnd)||[];ordered.forEach((p,i)=>p._no=i+1);
+  const cAuto=autoOrd.length>1?pathCost(autoOrd,S.mode):{min:0};
+  const cOpen=vOpen?pathCost(vOpen,S.mode):{min:0},cLoop=vLoop?pathCost(vLoop,S.mode):{min:0};
   let tot={km:0,min:0},legs="";
-  for(let i=1;i<ordered.length;i++){const c=legCost(ordered[i-1],ordered[i],S.mode);tot.km+=c.km;tot.min+=c.min;
-    legs+=`<div class="leg"><div class="no">${i+1}</div><div><b>${esc(ordered[i].n)}</b><div class="how">${esc(c.how)} · <a href="${legLink(ordered[i-1],ordered[i],S.mode)}" target="_blank" rel="noopener">Weg ↗</a></div></div><div class="tm">${kmf(c.km)} km<br>${Math.round(c.min)} Min.</div></div>`;}
-  const stay=ordered.reduce((s,p)=>s+(p.dur||45),0);
+  for(let i=1;i<ordered.length;i++){const c=legCost(ordered[i-1],ordered[i],S.mode);tot.km+=c.km;tot.min+=c.min;const isEnd=ordered[i]._end;
+    legs+=`<div class="leg${isEnd?" endleg":""}"><div class="no"${isEnd?' style="background:var(--accent)"':""}>${isEnd?ic("flag"):i+1}</div><div><b>${esc(ordered[i].n)}</b><div class="how">${isEnd?"Ziel · ":""}${esc(c.how)} · <a href="${legLink(ordered[i-1],ordered[i],S.mode)}" target="_blank" rel="noopener">Weg ↗</a></div></div><div class="tm">${kmf(c.km)} km<br>${Math.round(c.min)} Min.</div></div>`;}
+  const stay=ordered.reduce((s,p)=>s+(p._end||["me","home"].includes(p.id)?0:durOf(p)),0);
   const ow=ordered.length?onTheWay(ordered,S.mode):[];const gl=gmapsRoute(ordered,S.mode);
+  const endSpec=S.routeEnd==="loop"?{loop:true}:(S.routeEnd==="ziel"&&endPoint?{n:endPoint.n,lat:endPoint.lat,lon:endPoint.lon,ref:endPoint.id}:null);
+  const real=ordered.filter(p=>!p._end);
   LAST_ORDER=ordered.length>1?{name:S.routeDay==="all"?"Meine Athen-Route":`Route ${fmt(S.routeDay)}`,day:S.routeDay==="all"?"":S.routeDay,mode:S.mode,
-    start:ordered[0].id==="me"?{n:"Mein Standort",lat:ordered[0].lat,lon:ordered[0].lon}:null,stops:ordered.filter(p=>p.id!=="me").map(p=>({id:p.id}))}:null;
+    start:["me","home"].includes(real[0].id)?{n:real[0].n,lat:real[0].lat,lon:real[0].lon}:null,stops:real.filter(p=>!["me","home"].includes(p.id)).map(p=>({id:p.id})),end:endSpec}:null;
+  const startIsBase=["me","home"].includes(startSel);
+  const dLoop=Math.round(cLoop.min-cOpen.min);
+  const endHint=!vOpen||vOpen.length<2?"":S.routeEnd==="open"?(startIsBase?`<b>Tipp:</b> Du startest bei ${startSel==="home"?"deiner Unterkunft":"deinem Standort"} – als Rundweg kommst du für nur ${fmtMin(Math.max(1,dLoop))} mehr wieder dorthin zurück.`:dLoop<=20?`<b>Tipp:</b> Ein Rundweg zurück zum Start kostet nur ${fmtMin(Math.max(1,dLoop))} mehr.`:`Die Route endet beim letzten Ziel. Zurück zum Start wären es ${fmtMin(dLoop)} mehr.`)
+    :S.routeEnd==="loop"?manual?`Rundweg: Nach deinem letzten Ziel geht es zurück zu „${esc((ordered[0]||{}).n||"")}“.`:`Rundweg: Die Reihenfolge ist so gewählt, dass du am Ende wieder bei „${esc(startObj.n)}“ bist (${dLoop>0?"+"+fmtMin(dLoop):"ohne Umweg"} gegenüber offen).`
+    :endPoint?(manual?`Nach deinem letzten Ziel geht es weiter zu „${esc(endPoint.n)}“.`:`Die Reihenfolge ist so gewählt, dass du zum Schluss bei „${esc(endPoint.n)}“ ankommst.`):"Wähle einen Ort, an dem du am Ende landen möchtest – z. B. ein Restaurant, eine Bar oder deine Unterkunft.";
+  const dMan=manual&&ordered.length>1?Math.round(tot.min-cAuto.min):0;
+  const seqList=manual?manualSeq().filter(p=>!(effEnd==="ziel"&&endPoint&&p.id===endPoint.id)):[];
+  const orderUI=cand.length<2?"":`<div class="endbox"><div class="rlabel">Reihenfolge</div>
+    <div class="seg wide2" role="group" aria-label="Reihenfolge">${[["auto","Effizienteste",manual&&dMan>0?"−"+fmtMin(dMan):""],["manual","Selbst festlegen",manual&&dMan>0?"+"+fmtMin(dMan):""]].map(([k,l,sub])=>`<button data-rorder="${k}" aria-pressed="${(manual?"manual":"auto")===k}"><span>${l}</span>${sub?`<small>${sub}</small>`:""}</button>`).join("")}</div>
+    ${manual?`<div class="slist">${baseStart?`<div class="srow"><div class="tile s" style="--cc:var(--rain)">${ic(baseStart.id==="home"?"home":"locate")}</div><div class="nm"><b>${esc(baseStart.n)}</b><small>Start</small></div></div>`:""}${seqList.map((p,i)=>`<div class="srow"><span class="ord">${i+1+(baseStart?1:0)}</span>${tile(p,true)}<div class="nm"><b>${esc(p.n)}</b><small>${catOf(p).n}${i===0&&!baseStart?" · Start":""}</small></div>
+       <button class="iconbtn" data-mv="up" data-id="${p.id}" aria-label="${esc(p.n)} nach oben"${i===0?" disabled":""}>${ic("up")}</button><button class="iconbtn" data-mv="down" data-id="${p.id}" aria-label="${esc(p.n)} nach unten"${i===seqList.length-1?" disabled":""}>${ic("down")}</button></div>`).join("")}</div>
+      <div class="tip">${dMan>2?`Deine Reihenfolge ist ca. <b>${fmtMin(dMan)}</b> länger unterwegs als die effizienteste. `:dMan<=2&&ordered.length>2?"Deine Reihenfolge ist so gut wie die effizienteste. ":""}Verschiebe die Ziele mit den Pfeilen. Die Reihenfolge wird pro Tag gespeichert.</div>
+      ${dMan>2?`<button class="btn ghost" data-rorder="reset" style="align-self:flex-start">${ic("sparkles")}Effizienteste Reihenfolge übernehmen</button>`:""}`
+     :`<div class="tip">Die App sortiert die Ziele so, dass die Wege möglichst kurz sind.</div>`}</div>`;
   let html=`${S.sample?`<div class="notice">${ic("alert")}<span><b>Beispielplan</b> zum Ausprobieren. Entferne Einträge oder füge eigene hinzu, dann gehört er dir.</span></div>`:""}
   <details class="routebox fold" id="routeFold"${S.collapsed.__route?"":" open"}><summary><h2>${ic("route")}Route berechnen</h2>${ordered.length>1?`<small>${kmf(tot.km)} km · ${fmtMin(tot.min)}</small>`:""}</summary><div class="foldbody">
    <div class="row"><select id="routeDay" class="sel" aria-label="Tag für die Route">${routeDays.map(x=>`<option value="${x}"${S.routeDay===x?" selected":""}>${x==="all"?"Alle Ziele im Plan":fmt(x,true)}</option>`).join("")}</select>
    <div class="seg" role="group" aria-label="Verkehrsmittel">${[["walk","Zu Fuß"],["transit","Öffis"],["car","Auto"]].map(m=>`<button data-mode="${m[0]}" aria-pressed="${S.mode===m[0]}">${m[1]}</button>`).join("")}</div></div>
-   ${cand.length>1||(meObj&&cand.length)?`<div class="row"><label for="routeStart" style="font-size:.82rem;color:var(--muted);font-weight:700">Start</label><select id="routeStart" class="sel">${meObj?`<option value="me"${startSel==="me"?" selected":""}>📍 Mein Standort</option>`:""}${cand.map(p=>`<option value="${p.id}"${p.id===startSel?" selected":""}>${esc(p.n)}</option>`).join("")}</select>${meObj?"":`<button class="btn ghost" id="locBtn2">${ic("locate")}Ab meinem Standort</button>`}</div>`:""}
+   ${cand.length>1||((meObj||homeObj)&&cand.length)?`<div class="row"><label for="routeStart" class="rlabel">Start</label><select id="routeStart" class="sel">${homeObj?`<option value="home"${startSel==="home"?" selected":""}>🏠 Unterkunft</option>`:""}${meObj?`<option value="me"${startSel==="me"?" selected":""}>📍 Mein Standort</option>`:""}${manual?`<option value=""${!baseStart?" selected":""}>Erstes Ziel deiner Reihenfolge</option>`:cand.map(p=>`<option value="${p.id}"${p.id===startSel?" selected":""}>${esc(p.n)}</option>`).join("")}</select>${meObj?"":`<button class="btn ghost" id="locBtn2">${ic("locate")}Ab meinem Standort</button>`}</div>
+   ${orderUI}
+   <div class="endbox"><div class="rlabel">Ende der Route</div>
+    <div class="seg wide3" role="group" aria-label="Ende der Route">${[["open","Offen",vOpen&&vOpen.length>1?fmtMin(cOpen.min):""],["loop","Rundweg",vLoop&&vLoop.length>1?(dLoop>0?"+"+fmtMin(dLoop):"±0"):""],["ziel","Mit Ziel",""]].map(([k,l,sub])=>`<button data-rend="${k}" aria-pressed="${S.routeEnd===k}"><span>${l}</span>${sub?`<small>${sub}</small>`:""}</button>`).join("")}</div>
+    ${S.routeEnd==="ziel"?`<select id="routeEndId" class="sel" aria-label="Zielort">${endOptions(S.routeEndId,Object.keys(S.plan))}</select>`:""}
+    ${endHint?`<div class="tip">${endHint}</div>`:""}</div>`:""}
    ${S.mode==="walk"&&ids.map(byId).some(p=>p.c==="trip")?`<div class="tip">Tagesausflüge sind zu Fuß ausgeblendet, wähle Öffis oder Auto.</div>`:""}
    ${ordered.length<2?`<div class="empty">${ic("pin")}Für eine Route brauchst du mindestens zwei Ziele mit Standort${S.routeDay!=="all"?" an diesem Tag":""}.</div>`:`
    <div class="sumgrid"><div><b>${kmf(tot.km)} km</b><span>Wege ≈</span></div><div><b>${Math.round(tot.min)} Min.</b><span>unterwegs ≈</span></div><div><b>${kmf(stay/60)} h</b><span>vor Ort ≈</span></div><div><b>${kmf((tot.min+stay)/60)} h</b><span>gesamt ≈</span></div></div>
    ${(tot.min+stay)>600?`<div class="notice warn">${ic("alert")}<span><b>Viel für einen Tag:</b> über 10 Stunden. Verteile die Ziele auf mehrere Tage oder nutze den Tagesvorschlag.</span></div>`:""}
    <div class="mapbox">${mapSVG(ordered,{route:ordered})}${mapCaption()}</div>
-   <div class="legs"><div class="leg"><div class="no"${ordered[0].id==="me"?' style="background:var(--rain)"':""}>1</div><div><b>${esc(ordered[0].n)}</b><div class="how">Start</div></div><div class="tm"></div></div>${legs}</div>
+   <div class="legs"><div class="leg"><div class="no"${["me","home"].includes(ordered[0].id)?' style="background:var(--rain)"':""}>1</div><div><b>${esc(ordered[0].n)}</b><div class="how">Start</div></div><div class="tm"></div></div>${legs}</div>
    <div class="actions"><button class="btn primary" data-act="saveplan">${ic("bookmark")}Route speichern</button>${LAST_ORDER?shareBtns(LAST_ORDER,"plan"):""}${gl?`<a class="btn ghost" href="${gl}" target="_blank" rel="noopener">${ic("map")}Google Maps</a>`:""}</div>
-   <div class="tip">Reihenfolge per Nächster-Nachbar plus 2-opt optimiert. Zeiten sind Schätzungen.${S.mode==="transit"?" Google Maps unterstützt bei Öffis keine Zwischenstopps, nutze dafür die Links pro Abschnitt.":""}</div>`}
+   <div class="tip">${manual?"Reihenfolge von dir festgelegt.":"Reihenfolge per Nächster-Nachbar plus 2-opt optimiert."} Zeiten sind Schätzungen.${S.mode==="transit"?" Google Maps unterstützt bei Öffis keine Zwischenstopps, nutze dafür die Links pro Abschnitt.":""}</div>`}
    ${ow.length?`<div><h3 style="font-size:1rem;margin-bottom:4px">Liegt auf dem Weg</h3><div class="legs">${ow.map(([i,dist])=>`<div class="leg" style="grid-template-columns:38px minmax(0,1fr) auto;align-items:center">${tile(i,true)}<div><b>${esc(i.n)}</b><div class="how">${catOf(i).n} · ${Math.round(dist*1000)} m Umweg${i.p&&i.p.t?" · "+esc(i.p.t):""}</div></div><div>${planBtn(i.id,S.routeDay!=="all"?S.routeDay:"")}</div></div>`).join("")}</div></div>`:""}
   </div></details>
   <div class="row" style="justify-content:space-between"><small style="color:var(--muted)">${ids.length} Ziele · ${ids.filter(isDone).length} erlebt</small><button class="btn ghost" data-act="foldall">${ic(order.some(x=>S.collapsed[x||"none"])?"down":"up")}${order.some(x=>S.collapsed[x||"none"])?"Alle aufklappen":"Alle einklappen"}</button></div>`;
   order.forEach(dd=>{const key=dd||"none";const list=groups[dd];const done=list.filter(isDone).length;
     html+=`<details class="planday" data-dkey="${key}"${S.collapsed[key]?"":" open"}><summary><span class="pd-t">${dd?fmt(dd,true):"Noch ohne Tag"}</span><span class="pd-n">${list.length} Ziele${done?` · ${done} erlebt`:""}</span></summary><div class="pd-body">${list.map(id=>{const it=byId(id);const st=S.plan[id];const cat=catOf(it);
     return `<div class="pitem${isDone(id)?" done":""}"><input class="check" type="checkbox" id="done-${id}" data-done="${id}"${isDone(id)?" checked":""} aria-label="Erledigt: ${esc(it.n)}">${tile(it,true)}<div class="nm">${esc(it.n)}<small>${cat.n}${it.a?" · "+esc(it.a):it.venue?" · "+esc(it.venue):""}${!hasGeo(it)?" · ohne Standort":""}</small></div><button class="iconbtn" data-plan="${id}" aria-label="Entfernen" title="Entfernen">${ic("trash")}</button>
-     <div class="pmeta"><select class="sel small" id="day-${id}" data-day="${id}" aria-label="Tag wählen">${dayOpts(dd)}</select>${priceBadge(it.p)}${warnFor(it,dd)}</div></div>`;}).join("")}</div></details>`;});
+     <div class="pmeta"><select class="sel small" id="day-${id}" data-day="${id}" aria-label="Tag wählen">${dayOpts(dd)}</select>${durSelect(it,"pdur-"+id)}${priceBadge(it.p)}${warnFor(it,dd)}</div></div>`;}).join("")}</div></details>`;});
   html+=`<button class="btn ghost" id="clearPlan" style="align-self:center">${ic("trash")}Plan leeren</button>`;
   el.innerHTML=html;ordered.forEach(p=>delete p._no);}
 
@@ -1199,7 +1280,7 @@ function renderAll(){syncControls();renderDiscover();renderEvents();renderFood()
 function openSheet(o){$("#sheet").hidden=!o;$("#scrim").hidden=!o;if(o)$("#dStart").focus();else $("#openSettings").focus();}
 
 document.addEventListener("click",e=>{
-  const t=e.target.closest("#locBtn,#locBtn2,[data-sort],[data-kueche],[data-tab],[data-cat],[data-plan],[data-goto],[data-mode],[data-view],.marker,#clearPlan,#openSettings,#closeSettings,#doneSettings,#scrim");if(!t)return;
+  const t=e.target.closest("#locBtn,#locBtn2,[data-rend],[data-rorder],[data-mv],[data-sort],[data-kueche],[data-tab],[data-cat],[data-plan],[data-goto],[data-mode],[data-view],.marker,#clearPlan,#openSettings,#closeSettings,#doneSettings,#scrim");if(!t)return;
   if(t.id==="locBtn"){locate();return;}
   if(t.id==="locBtn2"){S.routeStart="me";save();locate();return;}
   if(t.dataset.sort){S.sort=t.dataset.sort;save();renderDiscover();return;}
@@ -1211,6 +1292,15 @@ document.addEventListener("click",e=>{
   if(t.dataset.cat!==undefined){const c=t.dataset.cat;if(!c)S.cats=[];else S.cats=S.cats.includes(c)?S.cats.filter(x=>x!==c):[...S.cats,c];save();renderDiscover();return;}
   if(t.dataset.plan){togglePlan(t.dataset.plan,t.dataset.day);return;}
   if(t.dataset.mode){S.mode=t.dataset.mode;save();renderPlan();return;}
+  if(t.dataset.rend){S.routeEnd=t.dataset.rend;save();renderPlan();return;}
+  if(t.dataset.rorder){const k=S.routeDay||"all";if(!S.manual)S.manual={};
+    if(t.dataset.rorder==="reset"){S.manual[k]=(LAST_AUTO[k]||[]).slice();toast("Effizienteste Reihenfolge übernommen");}
+    else{S.routeOrder=t.dataset.rorder;if(S.routeOrder==="manual"&&!S.manual[k])S.manual[k]=(LAST_AUTO[k]||[]).slice();}
+    save();renderPlan();return;}
+  if(t.dataset.mv){const k=S.routeDay||"all";if(!S.manual)S.manual={};const cur=[...document.querySelectorAll("[data-mv='up']")].map(b=>b.dataset.id);
+    const ids=(cur.length?cur:(S.manual[k]||[])).slice();const i=ids.indexOf(t.dataset.id),j=t.dataset.mv==="up"?i-1:i+1;
+    if(i>=0&&j>=0&&j<ids.length){[ids[i],ids[j]]=[ids[j],ids[i]];const rest=(S.manual[k]||[]).filter(x=>!ids.includes(x));S.manual[k]=[...ids,...rest];save();renderPlan();
+      const b=document.querySelector(`[data-mv='${t.dataset.mv}'][data-id='${t.dataset.id}']`);if(b&&!b.disabled)b.focus();}return;}
   if(t.id==="clearPlan"){S.plan={};S.sample=false;save();renderAll();toast("Plan geleert");return;}
   if(t.classList.contains("marker")&&S.tab==="entdecken"){hlId=t.dataset.id;renderDiscover();return;}
   const id=t.dataset.goto||t.dataset.id;if(id)goTo(id);
@@ -1232,6 +1322,8 @@ document.addEventListener("change",e=>{const t=e.target;
   if(t.dataset.day&&t.tagName==="SELECT"){S.plan[t.dataset.day].day=t.value;S.sample=false;save();renderPlan();return;}
   if(t.id==="routeDay"){S.routeDay=t.value;S.routeStart=null;save();renderPlan();return;}
   if(t.id==="routeStart"){S.routeStart=t.value;save();renderPlan();return;}
+  if(t.id==="routeEndId"){S.routeEndId=t.value;save();renderPlan();return;}
+  if(t.dataset.dur){if(!S.durs)S.durs={};if(t.value)S.durs[t.dataset.dur]=+t.value;else delete S.durs[t.dataset.dur];save();renderAll();toast(t.value?`Zeit eingeplant: ${fmtDur(+t.value)}`:"Wieder mein Vorschlag");return;}
 });
 
 
@@ -1349,7 +1441,7 @@ function bestDays(it){const ds=days();if(ds.length<2)return null;const sc=ds.map
   const avoid=sc.filter(x=>x.s>=min+0.6).map(x=>({day:x.day,r:dayReason(it,x.day)})).filter(x=>x.r).slice(0,2);
   const closed=ds.filter(x=>dayScore(it,x)===null);return {best,avoid,closed};}
 function bestHour(it,day){const hf=hoursFor(it,day);const spans=hf?hf.spans:[[540,1260]];let best=null;const dark=it.in===false&&kindOf(it)!=="bar"?sunsetMin(day):1440;
-  spans.forEach(([o,c])=>{const stay=(it.dur||45);for(let m=Math.max(o,480);m+Math.min(stay,90)<=Math.min(c,1440,dark+(kindOf(it)==="sunset"?20:0));m+=30){const cr=crowd(it,day,m);if(!best||cr<best.c)best={m,c:cr};}});return best;}
+  spans.forEach(([o,c])=>{const stay=durOf(it);for(let m=Math.max(o,480);m+Math.min(stay,90)<=Math.min(c,1440,dark+(kindOf(it)==="sunset"?20:0));m+=30){const cr=crowd(it,day,m);if(!best||cr<best.c)best={m,c:cr};}});return best;}
 
 /* ===================== KARTEN-INFOS ===================== */
 function refDay(){const ds=days();const now=athensNow();return ds.includes(now.iso)?{day:now.iso,today:true,min:now.min}:{day:ds[0],today:false};}
@@ -1372,15 +1464,18 @@ function hoursCrowd(it){if(!ITEMS.includes(it))return "";const r=refDay();const 
 
 /* ===================== TEILEN ===================== */
 const MODE_N={walk:"zu Fuß",transit:"mit Öffis",car:"mit dem Auto"},MODE_E={walk:"🚶",transit:"🚇",car:"🚗"};
-function stopsPts(r){const pts=[];if(r.start)pts.push({id:"start",n:r.start.n,lat:r.start.lat,lon:r.start.lon,dur:0});r.stops.forEach(s=>{const it=byId(s.id);if(it)pts.push(Object.assign(Object.create(it),{_t:s.t,_d:s.d}));});return pts;}
+function stopsPts(r){const pts=[];if(r.start)pts.push({id:"start",n:r.start.n,lat:r.start.lat,lon:r.start.lon,dur:0});r.stops.forEach(s=>{const it=byId(s.id);if(it)pts.push(Object.assign(Object.create(it),{_t:s.t,_d:s.d}));});
+  if(r.end){const f=pts.find(hasGeo);const e=r.end.loop?(f?{n:`Zurück zum Start: ${f.n}`,lat:f.lat,lon:f.lon,_loop:true}:null):r.end;if(e&&hasGeo(e))pts.push({id:"end",n:e.n,lat:e.lat,lon:e.lon,dur:0,_end:true,_loop:!!e._loop,_t:r.endT||""});}
+  return pts;}
+function endSel(r){return !r.end?"open":r.end.loop?"loop":"ziel";}
 function routeMetrics(r){const pts=stopsPts(r).filter(hasGeo);let km=0,min=0;const legs=[];for(let i=1;i<pts.length;i++){const c=legCost(pts[i-1],pts[i],r.mode);km+=c.km;min+=c.min;legs.push(c);}
-  const stay=stopsPts(r).reduce((s,p)=>s+(p._d||p.dur||0),0);return {pts,legs,km,min,stay};}
+  const stay=stopsPts(r).reduce((s,p)=>s+(p.id==="start"||p._end?0:(p._d||durOf(p))),0);return {pts,legs,km,min,stay};}
 function priceShort(p){if(!p)return "";if(p.k==="fix")return p.t;if(p.k==="free")return p.t||"";if(p.k==="est")return p.t;return "";}
 function routeText(r){const m=routeMetrics(r);const L=[`🗺️ ${r.name}`];
   L.push([r.day?`📅 ${fmt(r.day,true)}`:"",`${MODE_E[r.mode]} ${MODE_N[r.mode]}`,`≈ ${kmf(m.km)} km`,`≈ ${fmtMin(m.min)} unterwegs`].filter(Boolean).join(" · "));L.push("");
   const all=stopsPts(r);let gi=0;
   all.forEach((p,i)=>{if(i>0&&hasGeo(p)&&hasGeo(all[i-1])){const c=legCost(all[i-1],p,r.mode);L.push(`   ${MODE_E[r.mode]} ${fmtMin(c.min)}${r.mode==="transit"&&c.how!=="zu Fuß"?" ("+c.how+")":""}`);}
-    if(p.id==="start"){L.push(`📍 Start: ${p.n}`);return;}gi++;const pr=priceShort(p.p);
+    if(p.id==="start"){L.push(`📍 Start: ${p.n}`);return;}if(p.id==="end"){L.push(`🏁 ${p._t?p._t+"  ":""}${p._loop?p.n:"Ziel: "+p.n}`);return;}gi++;const pr=priceShort(p.p);
     L.push(`${p._t?p._t+"  ":""}${gi}. ${p.n}${pr?" · "+pr:""}${p.eu25?" (EU unter 25 frei)":""}`);});
   const g=gmapsRoute(m.pts,r.mode);if(g){L.push("");L.push(`Route in Google Maps: ${g}`);}return L.join("\n");}
 function shareBtns(r,prefix){const txt=routeText(r);return `<button class="btn" data-act="copy" data-src="${prefix}">${ic("copy")}Kopieren</button><a class="btn" href="https://wa.me/?text=${encodeURIComponent(txt)}" target="_blank" rel="noopener">${ic("share")}WhatsApp</a>`;}
@@ -1406,15 +1501,17 @@ function renderRoutes(el){const ds=days();
   el.innerHTML=html;}
 function routeEditor(r,ds,m){const all=stopsPts(r);let gi=0;
   const rows=r.stops.map((s,i)=>{const it=byId(s.id);if(!it)return "";const cat=catOf(it);return `<div class="srow">${tile(it,true)}<div class="nm"><b>${s.t?`<span class="mono">${s.t}</span> `:""}${esc(it.n)}</b><small>${cat.n}${i>0&&hasGeo(byId(r.stops[i-1].id))&&hasGeo(it)?" · "+MODE_E[r.mode]+" "+fmtMin(legCost(byId(r.stops[i-1].id),it,r.mode).min):""}</small></div>
-    <button class="iconbtn" data-act="r-up" data-id="${r.id}" data-i="${i}" aria-label="Nach oben"${i===0?" disabled":""}>${ic("up")}</button><button class="iconbtn" data-act="r-down" data-id="${r.id}" data-i="${i}" aria-label="Nach unten"${i===r.stops.length-1?" disabled":""}>${ic("down")}</button><button class="iconbtn" data-act="r-rm" data-id="${r.id}" data-i="${i}" aria-label="Entfernen">${ic("x")}</button></div>`;}).join("");
+    <select class="sel small" id="rdur-${r.id}-${i}" data-act="r-dur" data-id="${r.id}" data-i="${i}" aria-label="Zeit für ${esc(it.n)}">${[["","⏱ "+fmtDur(s.d||durOf(it))]].concat([15,30,45,60,90,120,150,180,240,300].map(v=>[v,"⏱ "+fmtDur(v)])).map(([v,l])=>`<option value="${v}">${l}</option>`).join("")}</select><button class="iconbtn" data-act="r-up" data-id="${r.id}" data-i="${i}" aria-label="Nach oben"${i===0?" disabled":""}>${ic("up")}</button><button class="iconbtn" data-act="r-down" data-id="${r.id}" data-i="${i}" aria-label="Nach unten"${i===r.stops.length-1?" disabled":""}>${ic("down")}</button><button class="iconbtn" data-act="r-rm" data-id="${r.id}" data-i="${i}" aria-label="Entfernen">${ic("x")}</button></div>`;}).join("");
   return `<div class="editor">
    <label class="f" for="rn-${r.id}">Name<input class="txt" id="rn-${r.id}" data-act="r-name" data-id="${r.id}" value="${esc(r.name)}"></label>
    <div class="row"><select class="sel" id="rd-${r.id}" data-act="r-day" data-id="${r.id}"><option value="">Ohne Tag</option>${ds.map(x=>`<option value="${x}"${r.day===x?" selected":""}>${fmt(x,true)}</option>`).join("")}${r.day&&!ds.includes(r.day)?`<option value="${r.day}" selected>${fmt(r.day,true)}</option>`:""}</select>
    <div class="seg" role="group" aria-label="Verkehrsmittel">${[["walk","Zu Fuß"],["transit","Öffis"],["car","Auto"]].map(x=>`<button data-act="r-mode" data-id="${r.id}" data-mode2="${x[0]}" aria-pressed="${r.mode===x[0]}">${x[1]}</button>`).join("")}</div></div>
    ${r.start?`<div class="tip">Start: ${esc(r.start.n)} · <button class="linkbtn" data-act="r-nostart" data-id="${r.id}">entfernen</button></div>`:""}
+   <div class="endbox"><div class="rlabel">Ende der Route</div><div class="seg wide3" role="group" aria-label="Ende der Route">${[["open","Offen"],["loop","Rundweg"],["ziel","Mit Ziel"]].map(([k,l])=>`<button data-act="r-end" data-id="${r.id}" data-k="${k}" aria-pressed="${endSel(r)===k}"><span>${l}</span></button>`).join("")}</div>
+    ${endSel(r)==="ziel"?`<select class="sel" id="re-${r.id}" data-act="r-endid" data-id="${r.id}" aria-label="Zielort">${endOptions(r.end&&r.end.ref||"",r.stops.map(s=>s.id))}</select>`:""}</div>
    <div class="slist">${rows||`<div class="tip">Noch keine Stopps.</div>`}</div>
    <select class="sel" id="ra-${r.id}" data-act="r-add" data-id="${r.id}" aria-label="Stopp hinzufügen">${allOptions()}</select>
-   ${m.pts.length>1?`<div class="mapbox">${mapSVG(m.pts.map((p,i)=>Object.assign(Object.create(p),{_no:i+1,id:p.id})),{route:m.pts})}</div>`:""}
+   ${m.pts.length>1?`<div class="mapbox">${mapSVG(m.pts.map((p,i)=>Object.assign(Object.create(p),{_no:i+1,id:p.id,_end:p._end,_loop:p._loop})),{route:m.pts})}</div>`:""}
    <div class="actions"><button class="btn" data-act="r-opt" data-id="${r.id}">${ic("sparkles")}Reihenfolge optimieren</button><button class="btn" data-act="r-toplan" data-id="${r.id}">${ic("route")}In meinen Plan</button>${m.pts.length>1?`<a class="btn ghost" href="${gmapsRoute(m.pts,r.mode)}" target="_blank" rel="noopener">${ic("map")}Google Maps</a>`:""}</div>
   </div>`;}
 
@@ -1436,7 +1533,8 @@ function dietOk(it){if(!it.diet)return true;if(S.vegan&&!it.diet.vegan)return fa
 function seasonOff(it){return it.season&&!months().some(m=>it.season.includes(m));}
 function startPt(o){if(o.from==="me"&&ME)return {id:"start",n:"Mein Standort",lat:ME.lat,lon:ME.lon};if(o.from==="home"&&S.home)return {id:"start",n:"Unterkunft",lat:S.home.lat,lon:S.home.lon};return CENTER;}
 function genDay(o){const day=o.day||days()[0];const T={entspannt:{buf:20,f:1.15},normal:{buf:10,f:1},straff:{buf:5,f:.85}}[o.tempo]||{buf:10,f:1};
-  const R=rng(o.seed||1);let t=toMin(o.start);const end=t+o.hours*60;let pos=startPt(o);const used=new Set();const out=[];const ss=sunsetMin(day);const warns=[];
+  const R=rng(o.seed||1);let t=toMin(o.start);const end=t+o.hours*60;let pos=startPt(o);
+  const endPt=o.endMode==="loop"?pos:o.endMode==="ziel"?resolvePoint(o.endId):null;const used=new Set();const out=[];const ss=sunsetMin(day);const warns=[];
   const pz=[];if(o.breakfast&&toMin(o.start)<=11*60)pz.push({k:"breakfast",at:toMin(o.start),dur:45,cat:"cafe",tag:"fruehstueck",n:"Frühstück"});
   if(o.lunch)pz.push({k:"lunch",at:toMin(o.lunchAt),dur:60,cat:"food",n:"Mittagessen"});
   if(o.coffee)pz.push({k:"coffee",at:Math.max(toMin(o.lunchAt)+150,16*60),dur:30,cat:"cafe",n:"Kaffeepause"});
@@ -1452,15 +1550,16 @@ function genDay(o){const day=o.day||days()[0];const T={entspannt:{buf:20,f:1.15}
         out.push({type:"event",it:ev.ev,start:ev.at,end:ev.at+len});t=ev.at+len;pos=ev.ev;ev.done=true;continue;}}
     const p=pauses.find(x=>!x.done&&t>=x.at-25);
     if(p){p.done=true;const cands=ITEMS.filter(i=>hasGeo(i)&&i.c===p.cat&&(!p.tag||(i.k||[]).includes(p.tag))&&(p.k!=="coffee"||(i.k||[]).some(x=>x==="kaffee"||x==="suess"))&&dietOk(i)&&!used.has(i.id)).map(i=>{const c=legCost(pos,i,o.mode);const arr=t+c.min;return {i,c,arr,s:(openAt(i,day,arr)&&openAt(i,day,arr+p.dur-1)?0:50)+c.min+crowd(i,day,arr)*4+R()*6};}).sort((a,b)=>a.s-b.s);
-      const best=cands[0];if(best&&best.s<50){go(best.i);out.push({type:"pause",k:p.k,n:p.n,it:best.i,start:best.arr,end:best.arr+p.dur});used.add(best.i.id);t=best.arr+p.dur;pos=best.i;}
+      const best=cands[0];if(best&&best.s<50){go(best.i);const pd=(S.durs&&S.durs[best.i.id])||p.dur;out.push({type:"pause",k:p.k,n:p.n,it:best.i,start:best.arr,end:best.arr+pd});used.add(best.i.id);t=best.arr+pd;pos=best.i;}
       else{out.push({type:"pause",k:p.k,n:p.n,start:t,end:t+p.dur});t+=p.dur;}continue;}
     const nextP=pauses.find(x=>!x.done),nextE=fixed.find(f=>!f.done);
     const limit=Math.min(end,nextP?nextP.at+40:1e9,nextE?nextE.at-15:1e9);
     let best=null;
-    for(const c of pool){if(used.has(c.id))continue;const lc=legCost(pos,c,o.mode);let arr=t+lc.min+T.buf;const stay=Math.max(15,Math.min(180,Math.round((c.dur||45)*T.f/5)*5));
+    for(const c of pool){if(used.has(c.id))continue;const lc=legCost(pos,c,o.mode);let arr=t+lc.min+T.buf;const stay=S.durs&&S.durs[c.id]?S.durs[c.id]:Math.max(15,Math.min(180,Math.round((c.dur||45)*T.f/5)*5));
       if(!openAt(c,day,arr)){let waited=false;for(let w=10;w<=40;w+=10)if(openAt(c,day,arr+w)){arr+=w;waited=true;break;}if(!waited)continue;}
       let st=stay;if(!openAt(c,day,arr+st-1)){const hf=hoursFor(c,day);const sp=hf&&hf.spans.find(([a,b])=>arr>=a&&arr<b);if(!sp||sp[1]-arr<Math.min(st,45))continue;st=sp[1]-arr-(hf.h&&hf.h.last?0:0);}
       if(arr+st>limit+15)continue;
+      if(endPt&&arr+st+legCost(c,endPt,o.mode).min>end+15)continue;
       if(arr>21*60+30&&c.c!=="bar")continue;
       const hr=arr/60;let s=(PRIO[c.id]||4)-lc.min*0.12-crowd(c,day,arr)*1.4+R()*1.6;
       if(kindOf(c)==="site"&&hr<10)s+=2.5;
@@ -1478,24 +1577,29 @@ function genDay(o){const day=o.day||days()[0];const T={entspannt:{buf:20,f:1.15}
     if(bars[0]){out.push({type:"travel",min:bars[0].c.min,how:bars[0].c.how,km:bars[0].c.km});const a=t+bars[0].c.min;out.push({type:"pause",k:"drink",n:"Drink zum Abschluss",it:bars[0].i,start:a,end:Math.min(end,a+75)});t=a+75;}}
   // Reisezeiten ohne Ziel entfernen (am Ende)
   while(out.length&&out[out.length-1].type==="travel")out.pop();
-  const stops=out.filter(x=>x.it);const travel=out.filter(x=>x.type==="travel").reduce((s,x)=>s+x.min,0);
+  if(endPt&&hasGeo(endPt)&&out.length){const c=legCost(pos,endPt,o.mode);if(c.km>0.05)out.push({type:"travel",min:c.min,how:c.how,km:c.km});t+=c.km>0.05?c.min:0;
+    out.push({type:"finish",n:o.endMode==="loop"?`Zurück zum Start: ${endPt.n}`:endPt.n,pt:endPt,loop:o.endMode==="loop",start:t,end:t});}
+  const stops=out.filter(x=>x.it&&x.type!=="finish");const travel=out.filter(x=>x.type==="travel").reduce((s,x)=>s+x.min,0);
   if(day.slice(5)==="11-08")warns.push("Marathon-Tag: Im Zentrum sind viele Straßen gesperrt, zu Fuß oder mit der Metro planen.");
   if(day.slice(5)==="10-28")warns.push("Ochi-Tag: Vormittags Paraden am Syntagma, Sperrungen ab 9 Uhr.");
   if(day.slice(5)==="11-17")warns.push("Polytechnio-Gedenktag: Exarchia und Patission am Nachmittag meiden.");
   if(freeDays()[day])warns.push("Gratis-Sonntag: Staatliche Stätten sind sehr voll. Mit EU-Ausweis unter 25 bist du sowieso frei, also lieber einen anderen Tag wählen.");
   return {day,out,stops,travel,sunset:ss,warns,startPt:startPt(o),end:t};}
-function planFromGen(g,o){return {name:`Tagesvorschlag ${fmt(g.day)}`,day:g.day,mode:o.mode,start:g.startPt.id==="start"?{n:g.startPt.n,lat:g.startPt.lat,lon:g.startPt.lon}:null,
-  stops:g.stops.map(x=>({id:x.it.id,t:hhmm(x.start),d:Math.round(x.end-x.start)}))};}
+function planFromGen(g,o){const fin=g.out.find(x=>x.type==="finish");return {name:`Tagesvorschlag ${fmt(g.day)}`,day:g.day,mode:o.mode,start:g.startPt.id==="start"?{n:g.startPt.n,lat:g.startPt.lat,lon:g.startPt.lon}:null,
+  stops:g.stops.map(x=>({id:x.it.id,t:hhmm(x.start),d:Math.round(x.end-x.start)})),
+  end:fin?(fin.loop?{loop:true}:{n:fin.pt.n,lat:fin.pt.lat,lon:fin.pt.lon,ref:o.endId}):null,endT:fin?hhmm(fin.start):""};}
 let LASTGEN=null;
 function renderSuggest(el){const ds=days();const o=S.dt;if(!ds.includes(o.day))o.day=ds[0];
   const g=genDay(o);LASTGEN=g;const r=planFromGen(g,o);
   const timeline=g.out.map(x=>{
     if(x.type==="travel")return `<div class="tl-travel">${ic(o.mode==="walk"?"walk":o.mode==="car"?"car":"train")}<span>${fmtMin(x.min)} · ${esc(x.how)}${x.km>=0.3?` · ${kmf(x.km)} km`:""}</span></div>`;
+    if(x.type==="finish")return `<div class="tl-item finish" style="--cc:var(--accent)"><div class="tl-t">${hhmm(x.start)}</div><div class="tl-b"><span class="cat">${ic("flag")}Ziel</span><b>${esc(x.n)}</b></div></div>`;
     if(x.type==="free")return `<div class="tl-item free"><div class="tl-t">${hhmm(x.start)}</div><div class="tl-b"><b>Freie Zeit</b><small>${fmtMin(x.end-x.start)} zum Bummeln oder Ausruhen</small></div></div>`;
     const it=x.it;const isP=x.type==="pause";const ev=x.type==="event";
     const cc=it?`var(${it.hol?"--warn":catOf(it).c})`:"var(--muted)";
     return `<div class="tl-item${isP?" pause":""}" style="--cc:${cc}"><div class="tl-t">${hhmm(x.start)}<small>${hhmm(x.end)}</small></div><div class="tl-b">${isP?`<span class="cat">${esc(x.n)}</span>`:ev?`<span class="cat">Event${it.ta?" · Uhrzeit ca.":""}</span>`:""}
-      <b>${it?esc(it.n):esc(x.n)}</b><small>${it?esc(it.a||it.venue||""):""}${x.type==="stop"?` · ${CROWD_L[x.cr]}`:""}${x.sunset?" · zum Sonnenuntergang":""}${it&&priceShort(it.p)?" · "+esc(priceShort(it.p)):""}</small></div>
+      <b>${it?esc(it.n):esc(x.n)}</b><small>${it?esc(it.a||it.venue||""):""}${x.type==="stop"?` · ${CROWD_L[x.cr]}`:""}${x.sunset?" · zum Sonnenuntergang":""}${it&&priceShort(it.p)?" · "+esc(priceShort(it.p)):""}</small>
+      ${it&&!ev?`<div class="tl-dur">${durSelect(it,"tdur-"+it.id)}</div>`:""}</div>
       ${it?`<button class="iconbtn" data-goto="${it.id}" aria-label="Details">${ic("ext")}</button>`:""}</div>`;}).join("");
   const sel=(id,v,opts)=>`<select class="sel" id="${id}" data-act="dt">${opts.map(([k,l])=>`<option value="${k}"${String(v)===String(k)?" selected":""}>${l}</option>`).join("")}</select>`;
   el.innerHTML=`<p class="lede">Sag mir, wann und wie lange du unterwegs sein willst. Ich stelle einen Tag mit Pausen, Öffnungszeiten, Auslastung, Sonnenuntergang und Events zusammen.</p>
@@ -1506,8 +1610,10 @@ function renderSuggest(el){const ds=days();const o=S.dt;if(!ds.includes(o.day))o
      <label class="f" for="dt-hours">Unterwegs${sel("dt-hours",o.hours,[4,5,6,7,8,9,10,11,12,13,14].map(h=>[h,h+" Stunden"]))}</label>
      <label class="f" for="dt-tempo">Tempo${sel("dt-tempo",o.tempo,[["entspannt","Entspannt"],["normal","Normal"],["straff","Viel sehen"]])}</label>
      <label class="f" for="dt-from">Start bei${sel("dt-from",o.from,[["center","Syntagma (Zentrum)"],...(S.home?[["home","Unterkunft"]]:[]),...(ME?[["me","Mein Standort"]]:[])])}</label>
+     <label class="f" for="dt-endMode">Ende${sel("dt-endMode",o.endMode||"open",[["open","Offen (letztes Ziel)"],["loop","Rundweg zurück zum Start"],["ziel","An einem Ort meiner Wahl"]])}</label>
      <label class="f" for="dt-lunchAt">Mittag um${sel("dt-lunchAt",o.lunchAt,["12:30","13:00","13:30","14:00","14:30","15:00"].map(x=>[x,x+" Uhr"]))}</label>
     </div>
+    ${o.endMode==="ziel"?`<label class="f" for="dt-endId">Wo möchtest du am Ende landen?<select class="sel" id="dt-endId" data-act="dt">${endOptions(o.endId||"")}</select></label>`:""}
     <div class="row">${!S.home?`<button class="btn ghost" data-act="sethome">${ic("home")}Aktuellen Standort als Unterkunft</button>`:`<button class="btn ghost" data-act="clearhome">${ic("home")}Unterkunft gespeichert · entfernen</button>`}</div>
     <div class="seg" role="group" aria-label="Verkehrsmittel">${[["walk","Zu Fuß"],["transit","Öffis"],["car","Auto"]].map(x=>`<button data-act="dt-mode" data-mode2="${x[0]}" aria-pressed="${o.mode===x[0]}">${x[1]}</button>`).join("")}</div>
     <div><div class="flabel">Was interessiert dich?</div><div class="chips wrapchips">${INTERESTS.map(([k,l,i])=>`<button class="chip" data-act="dt-int" data-k="${k}" aria-pressed="${o.interests.includes(k)}">${ic(i)}${l}</button>`).join("")}</div></div>
@@ -1516,8 +1622,8 @@ function renderSuggest(el){const ds=days();const o=S.dt;if(!ds.includes(o.day))o
    ${g.warns.map(w=>`<div class="notice warn">${ic("alert")}<span>${esc(w)}</span></div>`).join("")}
    ${S.rain?`<div class="notice rain">${ic("umbrella")}<span>Regentag aktiv: nur Ziele drinnen oder teilweise überdacht.</span></div>`:""}
    <div class="ptitle"><h2 style="font-size:1.2rem">${fmt(g.day,true)}</h2><small>Sonnenuntergang ${hhmm(g.sunset)} · ${g.stops.length} Stationen · ${fmtMin(g.travel)} unterwegs</small></div>
-   ${g.stops.length?`<div class="timeline"><div class="tl-item start"><div class="tl-t">${o.start}</div><div class="tl-b"><b>Start: ${esc(g.startPt.n)}</b></div></div>${timeline}<div class="tl-item start"><div class="tl-t">${hhmm(g.end)}</div><div class="tl-b"><b>Ende</b></div></div></div>
-   <div class="mapbox">${mapSVG([g.startPt,...g.stops.map(x=>x.it)].filter(hasGeo).map((p,i)=>Object.assign(Object.create(p),{_no:i+1,id:p.id})),{route:[g.startPt,...g.stops.map(x=>x.it)]})}</div>
+   ${g.stops.length?`<div class="timeline"><div class="tl-item start"><div class="tl-t">${o.start}</div><div class="tl-b"><b>Start: ${esc(g.startPt.n)}</b></div></div>${timeline}${g.out.some(x=>x.type==="finish")?"":`<div class="tl-item start"><div class="tl-t">${hhmm(g.end)}</div><div class="tl-b"><b>Ende</b></div></div>`}</div>
+   <div class="mapbox">${mapSVG([g.startPt,...g.stops.map(x=>x.it)].filter(hasGeo).map((p,i)=>Object.assign(Object.create(p),{_no:i+1,id:p.id})),{route:[g.startPt,...g.stops.map(x=>x.it),...g.out.filter(x=>x.type==="finish").map(x=>x.pt)]})}</div>
    <div class="actions"><button class="btn primary" data-act="dt-save">${ic("bookmark")}Als Route speichern</button><button class="btn" data-act="dt-again">${ic("sparkles")}Anderer Vorschlag</button><button class="btn" data-act="dt-toplan">${ic("route")}In meinen Plan</button>${shareBtns(r,"gen")}</div>
    <div class="tip">Zeiten sind Schätzungen. Öffnungszeiten mit „ca.“ und Event-Uhrzeiten vorher prüfen. Bereits erlebte Sehenswürdigkeiten werden übersprungen.</div>`
    :`<div class="empty">${ic("sparkles")}<span>Mit diesen Einstellungen passt nichts. Wähle mehr Interessen, einen längeren Zeitraum oder schalte den Regentag aus.</span></div>`}`;}
@@ -1555,7 +1661,10 @@ document.addEventListener("click",e=>{const t=e.target.closest("[data-act]");if(
   else if(a==="r-rm"){r.stops.splice(i,1);}
   else if(a==="r-mode"){r.mode=t.dataset.mode2;}
   else if(a==="r-nostart"){r.start=null;}
-  else if(a==="r-opt"){const pts=r.stops.map(s=>byId(s.id)).filter(hasGeo);const st=r.start?{id:"start",lat:r.start.lat,lon:r.start.lon}:null;const ord=optimize(st?[st,...pts]:pts,st?"start":pts[0]&&pts[0].id).filter(p=>p.id!=="start");r.stops=ord.map(p=>({id:p.id}));toast("Reihenfolge optimiert");}
+  else if(a==="r-opt"){const pts=r.stops.map(s=>byId(s.id)).filter(hasGeo);const st=r.start?{id:"start",lat:r.start.lat,lon:r.start.lon}:null;const all=st?[st,...pts]:pts;const sid=st?"start":pts[0]&&pts[0].id;
+    const tail=!r.end?null:r.end.loop?all.find(p=>p.id===sid):{id:r.end.ref||"end",lat:r.end.lat,lon:r.end.lon};
+    const ord=optimizeTo(all,sid,tail).filter(p=>p.id!=="start");r.stops=ord.map(p=>({id:p.id}));toast("Reihenfolge optimiert");}
+  else if(a==="r-end"){const k=t.dataset.k;if(k==="open")r.end=null;else if(k==="loop")r.end={loop:true};else r.end=r.end&&!r.end.loop?r.end:{pending:true};r.stops.forEach(s=>delete s.t);}
   else if(a==="r-toplan"){r.stops.forEach(s=>{if(!S.plan[s.id])S.plan[s.id]={day:r.day||"",done:false};else if(r.day)S.plan[s.id].day=r.day;});S.sample=false;save();renderAll();toast("In den Plan übernommen");return;}
   else return;
   save();renderPlan();});
@@ -1566,6 +1675,8 @@ document.addEventListener("change",e=>{const t=e.target;const a=t.dataset&&t.dat
   if(a==="r-name"){r.name=t.value.trim()||"Meine Route";}
   else if(a==="r-day"){r.day=t.value;}
   else if(a==="r-add"&&t.value){r.stops.push({id:t.value});t.value="";}
+  else if(a==="r-dur"&&t.value){const st=r.stops[+t.dataset.i];if(st)st.d=+t.value;}
+  else if(a==="r-endid"){const p=resolvePoint(t.value);r.end=p?{n:p.n,lat:p.lat,lon:p.lon,ref:t.value}:{pending:true};}
   save();renderPlan();});
 
 document.addEventListener("toggle",e=>{const t=e.target;if(!t||t.tagName!=="DETAILS")return;if(!S.collapsed)S.collapsed={};
