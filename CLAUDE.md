@@ -31,7 +31,7 @@ src/init.js      Start der App und Beispielplan
 build.py         baut index.html (GitHub Pages, mit Manifest und Icons) und dist/fragment.html (Artifact)
 ```
 - Kein Framework, alles landet in einer HTML-Datei.
-- Gespeichert wird im `localStorage` (Schlüssel `athen-kompass-v1`): Reisedaten, Plan, Routen, Einstellungen, Tagebuch (`S.log[id] = {done, at, r, note}`, eigene Einträge in `S.custom`). Der Standort wird nicht gespeichert. Bestehende Felder nie umbenennen, sonst gehen gespeicherte Daten verloren.
+- Gespeichert wird im `localStorage` (Schlüssel `athen-kompass-v1`): Reisedaten, Plan, Routen, Einstellungen, eigene Zeiten pro Aktivität (`S.durs[id]` in Minuten), eigene Routen-Reihenfolge (`S.manual[tag]`), Tagebuch (`S.log[id] = {done, at, r, note}`, eigene Einträge in `S.custom`). Der Standort wird nicht gespeichert. Bestehende Felder nie umbenennen, sonst gehen gespeicherte Daten verloren.
 - `build.py` fügt die Skripte in dieser Reihenfolge zusammen: data, app, features, diary, init.
 - Ort hinzufügen: Eintrag in `ITEMS` in `src/data.js` (id, Kategorie, Koordinaten, drinnen/draußen, Dauer, Preis). Restaurants und Cafés brauchen zusätzlich `k` (Küchen-Kategorien aus `KUECHE`, z. B. `["fruehstueck","griechisch"]`) und `diet` (veg/vegan/lf). Öffnungszeiten optional in `HOURS` in `src/features.js` eintragen, mit `v:1` für geprüfte und `v:0` für ungefähre Zeiten. Neue Sehenswürdigkeiten bei Bedarf in `PRIO` und `KIND_OVR` (features.js) einordnen.
 - Küchen-Kategorien: Frühstück & Brunch, Griechisch & Taverne, Street Food & Imbiss, Asiatisch, Italienisch & Pizza, Orientalisch, International & Bowls, Süßes & Bäckerei, Kaffee, Fine Dining, dazu der berechnete Filter „100 % vegan“.
@@ -40,6 +40,7 @@ build.py         baut index.html (GitHub Pages, mit Manifest und Icons) und dist
 - Tab-Leiste unten: Entdecken, Events, Essen, Plan, Praktisch. Dunkles App-Design mit mint-grünem aktivem Tab, Hell-Modus nach Systemeinstellung.
 - Reisezeitraum wählbar und dauerhaft gespeichert. Filter: vegetarisch, vegan, laktosefrei, Regentag (Drinnen-Ziele zuerst, Alternativen).
 - Entdecken: Startseite mit Countdown, Suche, Kategorien, Liste oder Karte. Jede Karte zeigt Preis, Aufenthaltsdauer („vor Ort“), Öffnungszeiten, „jetzt geöffnet“, beste Uhrzeit und beste Tage nach Auslastung.
+- Eigene Zeit pro Aktivität: Neben dem Vorschlag lässt sich auf jeder Karte, in der Tripliste, im Tagesvorschlag und in gespeicherten Routen eine eigene Dauer wählen. Immer über `durOf(it)` (app.js) lesen, nie direkt `it.dur`.
 - Standort: Wegzeit zu Fuß, mit Öffis und mit dem Auto, Sortierung nach Nähe, Route ab Standort, Unterkunft speicherbar.
 - Essen: Küchen-Filter (Chips mit Anzahl) über Restaurants und Cafés, Küchen-Badges auf den Karten, nach Nähe sortiert, wenn der Standort aktiv ist. In Entdecken erscheint die Küchen-Leiste, sobald Restaurant oder Café gewählt ist.
 - Events: Feiertage, Gratis-Tage und Konzerte im Zeitraum.

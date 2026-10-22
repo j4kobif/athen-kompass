@@ -112,7 +112,7 @@ function bestDays(it){const ds=days();if(ds.length<2)return null;const sc=ds.map
   const avoid=sc.filter(x=>x.s>=min+0.6).map(x=>({day:x.day,r:dayReason(it,x.day)})).filter(x=>x.r).slice(0,2);
   const closed=ds.filter(x=>dayScore(it,x)===null);return {best,avoid,closed};}
 function bestHour(it,day){const hf=hoursFor(it,day);const spans=hf?hf.spans:[[540,1260]];let best=null;const dark=it.in===false&&kindOf(it)!=="bar"?sunsetMin(day):1440;
-  spans.forEach(([o,c])=>{const stay=(it.dur||45);for(let m=Math.max(o,480);m+Math.min(stay,90)<=Math.min(c,1440,dark+(kindOf(it)==="sunset"?20:0));m+=30){const cr=crowd(it,day,m);if(!best||cr<best.c)best={m,c:cr};}});return best;}
+  spans.forEach(([o,c])=>{const stay=durOf(it);for(let m=Math.max(o,480);m+Math.min(stay,90)<=Math.min(c,1440,dark+(kindOf(it)==="sunset"?20:0));m+=30){const cr=crowd(it,day,m);if(!best||cr<best.c)best={m,c:cr};}});return best;}
 
 /* ===================== KARTEN-INFOS ===================== */
 function refDay(){const ds=days();const now=athensNow();return ds.includes(now.iso)?{day:now.iso,today:true,min:now.min}:{day:ds[0],today:false};}
@@ -140,7 +140,7 @@ function stopsPts(r){const pts=[];if(r.start)pts.push({id:"start",n:r.start.n,la
   return pts;}
 function endSel(r){return !r.end?"open":r.end.loop?"loop":"ziel";}
 function routeMetrics(r){const pts=stopsPts(r).filter(hasGeo);let km=0,min=0;const legs=[];for(let i=1;i<pts.length;i++){const c=legCost(pts[i-1],pts[i],r.mode);km+=c.km;min+=c.min;legs.push(c);}
-  const stay=stopsPts(r).reduce((s,p)=>s+(p._d||p.dur||0),0);return {pts,legs,km,min,stay};}
+  const stay=stopsPts(r).reduce((s,p)=>s+(p.id==="start"||p._end?0:(p._d||durOf(p))),0);return {pts,legs,km,min,stay};}
 function priceShort(p){if(!p)return "";if(p.k==="fix")return p.t;if(p.k==="free")return p.t||"";if(p.k==="est")return p.t;return "";}
 function routeText(r){const m=routeMetrics(r);const L=[`🗺️ ${r.name}`];
   L.push([r.day?`📅 ${fmt(r.day,true)}`:"",`${MODE_E[r.mode]} ${MODE_N[r.mode]}`,`≈ ${kmf(m.km)} km`,`≈ ${fmtMin(m.min)} unterwegs`].filter(Boolean).join(" · "));L.push("");
@@ -172,7 +172,7 @@ function renderRoutes(el){const ds=days();
   el.innerHTML=html;}
 function routeEditor(r,ds,m){const all=stopsPts(r);let gi=0;
   const rows=r.stops.map((s,i)=>{const it=byId(s.id);if(!it)return "";const cat=catOf(it);return `<div class="srow">${tile(it,true)}<div class="nm"><b>${s.t?`<span class="mono">${s.t}</span> `:""}${esc(it.n)}</b><small>${cat.n}${i>0&&hasGeo(byId(r.stops[i-1].id))&&hasGeo(it)?" · "+MODE_E[r.mode]+" "+fmtMin(legCost(byId(r.stops[i-1].id),it,r.mode).min):""}</small></div>
-    <button class="iconbtn" data-act="r-up" data-id="${r.id}" data-i="${i}" aria-label="Nach oben"${i===0?" disabled":""}>${ic("up")}</button><button class="iconbtn" data-act="r-down" data-id="${r.id}" data-i="${i}" aria-label="Nach unten"${i===r.stops.length-1?" disabled":""}>${ic("down")}</button><button class="iconbtn" data-act="r-rm" data-id="${r.id}" data-i="${i}" aria-label="Entfernen">${ic("x")}</button></div>`;}).join("");
+    <select class="sel small" id="rdur-${r.id}-${i}" data-act="r-dur" data-id="${r.id}" data-i="${i}" aria-label="Zeit für ${esc(it.n)}">${[["","⏱ "+fmtDur(s.d||durOf(it))]].concat([15,30,45,60,90,120,150,180,240,300].map(v=>[v,"⏱ "+fmtDur(v)])).map(([v,l])=>`<option value="${v}">${l}</option>`).join("")}</select><button class="iconbtn" data-act="r-up" data-id="${r.id}" data-i="${i}" aria-label="Nach oben"${i===0?" disabled":""}>${ic("up")}</button><button class="iconbtn" data-act="r-down" data-id="${r.id}" data-i="${i}" aria-label="Nach unten"${i===r.stops.length-1?" disabled":""}>${ic("down")}</button><button class="iconbtn" data-act="r-rm" data-id="${r.id}" data-i="${i}" aria-label="Entfernen">${ic("x")}</button></div>`;}).join("");
   return `<div class="editor">
    <label class="f" for="rn-${r.id}">Name<input class="txt" id="rn-${r.id}" data-act="r-name" data-id="${r.id}" value="${esc(r.name)}"></label>
    <div class="row"><select class="sel" id="rd-${r.id}" data-act="r-day" data-id="${r.id}"><option value="">Ohne Tag</option>${ds.map(x=>`<option value="${x}"${r.day===x?" selected":""}>${fmt(x,true)}</option>`).join("")}${r.day&&!ds.includes(r.day)?`<option value="${r.day}" selected>${fmt(r.day,true)}</option>`:""}</select>
@@ -221,12 +221,12 @@ function genDay(o){const day=o.day||days()[0];const T={entspannt:{buf:20,f:1.15}
         out.push({type:"event",it:ev.ev,start:ev.at,end:ev.at+len});t=ev.at+len;pos=ev.ev;ev.done=true;continue;}}
     const p=pauses.find(x=>!x.done&&t>=x.at-25);
     if(p){p.done=true;const cands=ITEMS.filter(i=>hasGeo(i)&&i.c===p.cat&&(!p.tag||(i.k||[]).includes(p.tag))&&(p.k!=="coffee"||(i.k||[]).some(x=>x==="kaffee"||x==="suess"))&&dietOk(i)&&!used.has(i.id)).map(i=>{const c=legCost(pos,i,o.mode);const arr=t+c.min;return {i,c,arr,s:(openAt(i,day,arr)&&openAt(i,day,arr+p.dur-1)?0:50)+c.min+crowd(i,day,arr)*4+R()*6};}).sort((a,b)=>a.s-b.s);
-      const best=cands[0];if(best&&best.s<50){go(best.i);out.push({type:"pause",k:p.k,n:p.n,it:best.i,start:best.arr,end:best.arr+p.dur});used.add(best.i.id);t=best.arr+p.dur;pos=best.i;}
+      const best=cands[0];if(best&&best.s<50){go(best.i);const pd=(S.durs&&S.durs[best.i.id])||p.dur;out.push({type:"pause",k:p.k,n:p.n,it:best.i,start:best.arr,end:best.arr+pd});used.add(best.i.id);t=best.arr+pd;pos=best.i;}
       else{out.push({type:"pause",k:p.k,n:p.n,start:t,end:t+p.dur});t+=p.dur;}continue;}
     const nextP=pauses.find(x=>!x.done),nextE=fixed.find(f=>!f.done);
     const limit=Math.min(end,nextP?nextP.at+40:1e9,nextE?nextE.at-15:1e9);
     let best=null;
-    for(const c of pool){if(used.has(c.id))continue;const lc=legCost(pos,c,o.mode);let arr=t+lc.min+T.buf;const stay=Math.max(15,Math.min(180,Math.round((c.dur||45)*T.f/5)*5));
+    for(const c of pool){if(used.has(c.id))continue;const lc=legCost(pos,c,o.mode);let arr=t+lc.min+T.buf;const stay=S.durs&&S.durs[c.id]?S.durs[c.id]:Math.max(15,Math.min(180,Math.round((c.dur||45)*T.f/5)*5));
       if(!openAt(c,day,arr)){let waited=false;for(let w=10;w<=40;w+=10)if(openAt(c,day,arr+w)){arr+=w;waited=true;break;}if(!waited)continue;}
       let st=stay;if(!openAt(c,day,arr+st-1)){const hf=hoursFor(c,day);const sp=hf&&hf.spans.find(([a,b])=>arr>=a&&arr<b);if(!sp||sp[1]-arr<Math.min(st,45))continue;st=sp[1]-arr-(hf.h&&hf.h.last?0:0);}
       if(arr+st>limit+15)continue;
@@ -269,7 +269,8 @@ function renderSuggest(el){const ds=days();const o=S.dt;if(!ds.includes(o.day))o
     const it=x.it;const isP=x.type==="pause";const ev=x.type==="event";
     const cc=it?`var(${it.hol?"--warn":catOf(it).c})`:"var(--muted)";
     return `<div class="tl-item${isP?" pause":""}" style="--cc:${cc}"><div class="tl-t">${hhmm(x.start)}<small>${hhmm(x.end)}</small></div><div class="tl-b">${isP?`<span class="cat">${esc(x.n)}</span>`:ev?`<span class="cat">Event${it.ta?" · Uhrzeit ca.":""}</span>`:""}
-      <b>${it?esc(it.n):esc(x.n)}</b><small>${it?esc(it.a||it.venue||""):""}${x.type==="stop"?` · ${CROWD_L[x.cr]}`:""}${x.sunset?" · zum Sonnenuntergang":""}${it&&priceShort(it.p)?" · "+esc(priceShort(it.p)):""}</small></div>
+      <b>${it?esc(it.n):esc(x.n)}</b><small>${it?esc(it.a||it.venue||""):""}${x.type==="stop"?` · ${CROWD_L[x.cr]}`:""}${x.sunset?" · zum Sonnenuntergang":""}${it&&priceShort(it.p)?" · "+esc(priceShort(it.p)):""}</small>
+      ${it&&!ev?`<div class="tl-dur">${durSelect(it,"tdur-"+it.id)}</div>`:""}</div>
       ${it?`<button class="iconbtn" data-goto="${it.id}" aria-label="Details">${ic("ext")}</button>`:""}</div>`;}).join("");
   const sel=(id,v,opts)=>`<select class="sel" id="${id}" data-act="dt">${opts.map(([k,l])=>`<option value="${k}"${String(v)===String(k)?" selected":""}>${l}</option>`).join("")}</select>`;
   el.innerHTML=`<p class="lede">Sag mir, wann und wie lange du unterwegs sein willst. Ich stelle einen Tag mit Pausen, Öffnungszeiten, Auslastung, Sonnenuntergang und Events zusammen.</p>
@@ -345,6 +346,7 @@ document.addEventListener("change",e=>{const t=e.target;const a=t.dataset&&t.dat
   if(a==="r-name"){r.name=t.value.trim()||"Meine Route";}
   else if(a==="r-day"){r.day=t.value;}
   else if(a==="r-add"&&t.value){r.stops.push({id:t.value});t.value="";}
+  else if(a==="r-dur"&&t.value){const st=r.stops[+t.dataset.i];if(st)st.d=+t.value;}
   else if(a==="r-endid"){const p=resolvePoint(t.value);r.end=p?{n:p.n,lat:p.lat,lon:p.lon,ref:t.value}:{pending:true};}
   save();renderPlan();});
 

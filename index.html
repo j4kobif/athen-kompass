@@ -360,6 +360,11 @@ textarea.note{width:100%;min-width:0;border:1px solid var(--line);background:var
 .seg.wide3 button small{font-family:var(--f-mono);font-size:.7rem;color:var(--muted);font-weight:500}
 .leg .no svg.i{width:14px;height:14px;stroke-width:2.5}
 .tl-item.finish .cat{display:inline-flex;align-items:center;gap:4px}.tl-item.finish .cat svg.i{width:12px;height:12px}
+/* eigene zeiten */
+.durrow{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:.8rem;color:var(--muted)}
+.meta .dur.own{color:var(--accent);font-weight:700}
+.tl-dur{margin-top:4px}.tl-dur .sel{font-size:.72rem;padding:3px 8px}
+.srow .sel.small{max-width:96px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--navh) + 14px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:.85rem;font-weight:600;z-index:40;opacity:0;transition:opacity .2s;pointer-events:none;max-width:calc(100% - 32px);text-align:center}
 .toast.show{opacity:1}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
@@ -958,16 +963,22 @@ function kChips(scope){const list=ITEMS.filter(i=>i.c==="food"||i.c==="cafe");
   const opts=[["","Alle"],...KUECHE.map(k=>[k[0],k[1],k[2]]),["vegan","100 % vegan","leaf"]].filter(o=>!o[0]||list.some(i=>kOk(i,o[0])));
   return `<div class="chips" role="group" aria-label="Küche">${opts.map(([k,l,icn])=>`<button class="chip" data-kueche="${k}" aria-pressed="${(S.kueche||"")===k}">${icn?ic(icn):""}${l}${k?` <small class="cnt">${list.filter(i=>kOk(i,k)&&(!S.vegan||i.diet?.vegan)).length}</small>`:""}</button>`).join("")}</div>`;}
 function kBadges(it){return (it.k||[]).map(k=>`<span class="b kb">${KLABEL[k]}</span>`).join("");}
+// Eigene Zeit pro Aktivität (S.durs[id] in Minuten), sonst Vorschlag aus den Daten
+function durOf(it){const v=S.durs&&S.durs[it.id];return v||it.dur||45;}
+function fmtDur(m){return m>=60?(Math.round(m/15)/4).toString().replace(".",",")+" h":m+" Min.";}
+function durSelect(it,id,cls){const cur=S.durs&&S.durs[it.id]||"";const sug=it.dur||45;const max=it.c==="trip"?720:360;
+  const vals=[15,20,30,45,60,75,90,120,150,180,240,300,360,480,600,720].filter(v=>v<=max);if(cur&&!vals.includes(cur))vals.push(cur);vals.sort((a,b)=>a-b);
+  return `<select class="sel small${cls?" "+cls:""}" id="${id}" data-dur="${it.id}" aria-label="Zeit einplanen für ${esc(it.n)}"><option value="">⏱ Vorschlag: ${fmtDur(sug)}</option>${vals.map(v=>`<option value="${v}"${+cur===v?" selected":""}>⏱ ${fmtDur(v)}${v===sug?" (Vorschlag)":""}</option>`).join("")}</select>`;}
 function isDim(it){if(S.rain&&it.in===false)return true;if(it.season&&!months().some(m=>it.season.includes(m)))return true;return false;}
 function itemCard(it){const cat=catOf(it);const dim=isDim(it);
   const seasonOff=it.season&&!months().some(m=>it.season.includes(m));
   const closedDays=(it.closed||[]).map(x=>WDL[x]).join(", ");
   const alt=S.rain&&it.in===false&&it.alt?byId(it.alt):null;
   const fd=freeDays();const freeHit=it.eu25?Object.keys(fd).filter(k=>fd[k].includes("staatliche")).map(k=>fmt(k)).join(", "):"";
-  const dur=it.dur?(it.dur>=60?(Math.round(it.dur/30)/2).toString().replace(".",",")+" h":it.dur+" Min."):"";
+  const own=S.durs&&S.durs[it.id];const dur=own?fmtDur(own):it.dur?fmtDur(it.dur):"";
   return `<article class="card${dim?" dim":""}${hlId===it.id?" hl":""}" id="card-${it.id}" style="--cc:var(${cat.c})">
    <div class="card-h">${tile(it)}<div class="t"><div class="cat">${cat.n}</div><h3>${esc(it.n)}</h3>
-   <div class="meta"><span>${esc(it.a)}</span>${dur?`<span class="dur" title="Geschätzte Aufenthaltsdauer vor Ort">${ic("clock")}ca. ${dur} vor Ort</span>`:""}</div></div></div>
+   <div class="meta"><span>${esc(it.a)}</span>${dur?`<span class="dur${own?" own":""}" title="${own?"Deine eingeplante Zeit":"Geschätzte Aufenthaltsdauer vor Ort"}">${ic("clock")}${own?`${dur} eingeplant`:`ca. ${dur} vor Ort`}</span>`:""}</div></div></div>
    <div class="badges">${doneBadge(it.id)}${kBadges(it)}${priceBadge(it.p)}${inBadge(it)}${it.eu25?'<span class="b free">EU unter 25: frei</span>':""}${dietBadges(it)}${seasonOff?'<span class="b warn">im Zeitraum geschlossen</span>':""}${closedDays?`<span class="b warn">${closedDays} geschlossen</span>`:""}</div>
    ${distRow(it)}
    <p>${esc(it.d)}</p>
@@ -977,6 +988,7 @@ function itemCard(it){const cat=catOf(it);const dim=isDim(it);
    ${freeHit?`<div class="tip"><b>Gratis in deinem Zeitraum:</b> ${freeHit}</div>`:""}
    ${alt?`<div class="altline">${ic("umbrella")}<span>Bei Regen besser: <button data-goto="${alt.id}">${esc(alt.n)}</button>${alt.p&&alt.p.t?" · "+esc(alt.p.t):""}</span></div>`:""}
    <div class="actions">${planBtn(it.id)}<a class="btn" href="${mapsLink(it)}" target="_blank" rel="noopener">${ic("pin")}Karte</a>${it.url?`<a class="btn ghost" href="${esc(it.url)}" target="_blank" rel="noopener">${ic("ext")}Website</a>`:""}</div>
+   <div class="durrow"><span>Zeit vor Ort einplanen</span>${durSelect(it,"dur-"+it.id)}</div>
    ${diaryBlock(it)}
   </article>`;}
 function heroHtml(){const ds=days();const t=todayIso();const h=new Date().getHours();
@@ -1144,7 +1156,7 @@ function renderPlanList(el){const ds=days();const ids=Object.keys(S.plan).filter
   let tot={km:0,min:0},legs="";
   for(let i=1;i<ordered.length;i++){const c=legCost(ordered[i-1],ordered[i],S.mode);tot.km+=c.km;tot.min+=c.min;const isEnd=ordered[i]._end;
     legs+=`<div class="leg${isEnd?" endleg":""}"><div class="no"${isEnd?' style="background:var(--accent)"':""}>${isEnd?ic("flag"):i+1}</div><div><b>${esc(ordered[i].n)}</b><div class="how">${isEnd?"Ziel · ":""}${esc(c.how)} · <a href="${legLink(ordered[i-1],ordered[i],S.mode)}" target="_blank" rel="noopener">Weg ↗</a></div></div><div class="tm">${kmf(c.km)} km<br>${Math.round(c.min)} Min.</div></div>`;}
-  const stay=ordered.reduce((s,p)=>s+(p._end?0:(p.dur||45)),0);
+  const stay=ordered.reduce((s,p)=>s+(p._end||["me","home"].includes(p.id)?0:durOf(p)),0);
   const ow=ordered.length?onTheWay(ordered,S.mode):[];const gl=gmapsRoute(ordered,S.mode);
   const endSpec=S.routeEnd==="loop"?{loop:true}:(S.routeEnd==="ziel"&&endPoint?{n:endPoint.n,lat:endPoint.lat,lon:endPoint.lon,ref:endPoint.id}:null);
   const real=ordered.filter(p=>!p._end);
@@ -1188,7 +1200,7 @@ function renderPlanList(el){const ds=days();const ids=Object.keys(S.plan).filter
   order.forEach(dd=>{const key=dd||"none";const list=groups[dd];const done=list.filter(isDone).length;
     html+=`<details class="planday" data-dkey="${key}"${S.collapsed[key]?"":" open"}><summary><span class="pd-t">${dd?fmt(dd,true):"Noch ohne Tag"}</span><span class="pd-n">${list.length} Ziele${done?` · ${done} erlebt`:""}</span></summary><div class="pd-body">${list.map(id=>{const it=byId(id);const st=S.plan[id];const cat=catOf(it);
     return `<div class="pitem${isDone(id)?" done":""}"><input class="check" type="checkbox" id="done-${id}" data-done="${id}"${isDone(id)?" checked":""} aria-label="Erledigt: ${esc(it.n)}">${tile(it,true)}<div class="nm">${esc(it.n)}<small>${cat.n}${it.a?" · "+esc(it.a):it.venue?" · "+esc(it.venue):""}${!hasGeo(it)?" · ohne Standort":""}</small></div><button class="iconbtn" data-plan="${id}" aria-label="Entfernen" title="Entfernen">${ic("trash")}</button>
-     <div class="pmeta"><select class="sel small" id="day-${id}" data-day="${id}" aria-label="Tag wählen">${dayOpts(dd)}</select>${priceBadge(it.p)}${warnFor(it,dd)}</div></div>`;}).join("")}</div></details>`;});
+     <div class="pmeta"><select class="sel small" id="day-${id}" data-day="${id}" aria-label="Tag wählen">${dayOpts(dd)}</select>${durSelect(it,"pdur-"+id)}${priceBadge(it.p)}${warnFor(it,dd)}</div></div>`;}).join("")}</div></details>`;});
   html+=`<button class="btn ghost" id="clearPlan" style="align-self:center">${ic("trash")}Plan leeren</button>`;
   el.innerHTML=html;ordered.forEach(p=>delete p._no);}
 
@@ -1311,6 +1323,7 @@ document.addEventListener("change",e=>{const t=e.target;
   if(t.id==="routeDay"){S.routeDay=t.value;S.routeStart=null;save();renderPlan();return;}
   if(t.id==="routeStart"){S.routeStart=t.value;save();renderPlan();return;}
   if(t.id==="routeEndId"){S.routeEndId=t.value;save();renderPlan();return;}
+  if(t.dataset.dur){if(!S.durs)S.durs={};if(t.value)S.durs[t.dataset.dur]=+t.value;else delete S.durs[t.dataset.dur];save();renderAll();toast(t.value?`Zeit eingeplant: ${fmtDur(+t.value)}`:"Wieder mein Vorschlag");return;}
 });
 
 
@@ -1428,7 +1441,7 @@ function bestDays(it){const ds=days();if(ds.length<2)return null;const sc=ds.map
   const avoid=sc.filter(x=>x.s>=min+0.6).map(x=>({day:x.day,r:dayReason(it,x.day)})).filter(x=>x.r).slice(0,2);
   const closed=ds.filter(x=>dayScore(it,x)===null);return {best,avoid,closed};}
 function bestHour(it,day){const hf=hoursFor(it,day);const spans=hf?hf.spans:[[540,1260]];let best=null;const dark=it.in===false&&kindOf(it)!=="bar"?sunsetMin(day):1440;
-  spans.forEach(([o,c])=>{const stay=(it.dur||45);for(let m=Math.max(o,480);m+Math.min(stay,90)<=Math.min(c,1440,dark+(kindOf(it)==="sunset"?20:0));m+=30){const cr=crowd(it,day,m);if(!best||cr<best.c)best={m,c:cr};}});return best;}
+  spans.forEach(([o,c])=>{const stay=durOf(it);for(let m=Math.max(o,480);m+Math.min(stay,90)<=Math.min(c,1440,dark+(kindOf(it)==="sunset"?20:0));m+=30){const cr=crowd(it,day,m);if(!best||cr<best.c)best={m,c:cr};}});return best;}
 
 /* ===================== KARTEN-INFOS ===================== */
 function refDay(){const ds=days();const now=athensNow();return ds.includes(now.iso)?{day:now.iso,today:true,min:now.min}:{day:ds[0],today:false};}
@@ -1456,7 +1469,7 @@ function stopsPts(r){const pts=[];if(r.start)pts.push({id:"start",n:r.start.n,la
   return pts;}
 function endSel(r){return !r.end?"open":r.end.loop?"loop":"ziel";}
 function routeMetrics(r){const pts=stopsPts(r).filter(hasGeo);let km=0,min=0;const legs=[];for(let i=1;i<pts.length;i++){const c=legCost(pts[i-1],pts[i],r.mode);km+=c.km;min+=c.min;legs.push(c);}
-  const stay=stopsPts(r).reduce((s,p)=>s+(p._d||p.dur||0),0);return {pts,legs,km,min,stay};}
+  const stay=stopsPts(r).reduce((s,p)=>s+(p.id==="start"||p._end?0:(p._d||durOf(p))),0);return {pts,legs,km,min,stay};}
 function priceShort(p){if(!p)return "";if(p.k==="fix")return p.t;if(p.k==="free")return p.t||"";if(p.k==="est")return p.t;return "";}
 function routeText(r){const m=routeMetrics(r);const L=[`🗺️ ${r.name}`];
   L.push([r.day?`📅 ${fmt(r.day,true)}`:"",`${MODE_E[r.mode]} ${MODE_N[r.mode]}`,`≈ ${kmf(m.km)} km`,`≈ ${fmtMin(m.min)} unterwegs`].filter(Boolean).join(" · "));L.push("");
@@ -1488,7 +1501,7 @@ function renderRoutes(el){const ds=days();
   el.innerHTML=html;}
 function routeEditor(r,ds,m){const all=stopsPts(r);let gi=0;
   const rows=r.stops.map((s,i)=>{const it=byId(s.id);if(!it)return "";const cat=catOf(it);return `<div class="srow">${tile(it,true)}<div class="nm"><b>${s.t?`<span class="mono">${s.t}</span> `:""}${esc(it.n)}</b><small>${cat.n}${i>0&&hasGeo(byId(r.stops[i-1].id))&&hasGeo(it)?" · "+MODE_E[r.mode]+" "+fmtMin(legCost(byId(r.stops[i-1].id),it,r.mode).min):""}</small></div>
-    <button class="iconbtn" data-act="r-up" data-id="${r.id}" data-i="${i}" aria-label="Nach oben"${i===0?" disabled":""}>${ic("up")}</button><button class="iconbtn" data-act="r-down" data-id="${r.id}" data-i="${i}" aria-label="Nach unten"${i===r.stops.length-1?" disabled":""}>${ic("down")}</button><button class="iconbtn" data-act="r-rm" data-id="${r.id}" data-i="${i}" aria-label="Entfernen">${ic("x")}</button></div>`;}).join("");
+    <select class="sel small" id="rdur-${r.id}-${i}" data-act="r-dur" data-id="${r.id}" data-i="${i}" aria-label="Zeit für ${esc(it.n)}">${[["","⏱ "+fmtDur(s.d||durOf(it))]].concat([15,30,45,60,90,120,150,180,240,300].map(v=>[v,"⏱ "+fmtDur(v)])).map(([v,l])=>`<option value="${v}">${l}</option>`).join("")}</select><button class="iconbtn" data-act="r-up" data-id="${r.id}" data-i="${i}" aria-label="Nach oben"${i===0?" disabled":""}>${ic("up")}</button><button class="iconbtn" data-act="r-down" data-id="${r.id}" data-i="${i}" aria-label="Nach unten"${i===r.stops.length-1?" disabled":""}>${ic("down")}</button><button class="iconbtn" data-act="r-rm" data-id="${r.id}" data-i="${i}" aria-label="Entfernen">${ic("x")}</button></div>`;}).join("");
   return `<div class="editor">
    <label class="f" for="rn-${r.id}">Name<input class="txt" id="rn-${r.id}" data-act="r-name" data-id="${r.id}" value="${esc(r.name)}"></label>
    <div class="row"><select class="sel" id="rd-${r.id}" data-act="r-day" data-id="${r.id}"><option value="">Ohne Tag</option>${ds.map(x=>`<option value="${x}"${r.day===x?" selected":""}>${fmt(x,true)}</option>`).join("")}${r.day&&!ds.includes(r.day)?`<option value="${r.day}" selected>${fmt(r.day,true)}</option>`:""}</select>
@@ -1537,12 +1550,12 @@ function genDay(o){const day=o.day||days()[0];const T={entspannt:{buf:20,f:1.15}
         out.push({type:"event",it:ev.ev,start:ev.at,end:ev.at+len});t=ev.at+len;pos=ev.ev;ev.done=true;continue;}}
     const p=pauses.find(x=>!x.done&&t>=x.at-25);
     if(p){p.done=true;const cands=ITEMS.filter(i=>hasGeo(i)&&i.c===p.cat&&(!p.tag||(i.k||[]).includes(p.tag))&&(p.k!=="coffee"||(i.k||[]).some(x=>x==="kaffee"||x==="suess"))&&dietOk(i)&&!used.has(i.id)).map(i=>{const c=legCost(pos,i,o.mode);const arr=t+c.min;return {i,c,arr,s:(openAt(i,day,arr)&&openAt(i,day,arr+p.dur-1)?0:50)+c.min+crowd(i,day,arr)*4+R()*6};}).sort((a,b)=>a.s-b.s);
-      const best=cands[0];if(best&&best.s<50){go(best.i);out.push({type:"pause",k:p.k,n:p.n,it:best.i,start:best.arr,end:best.arr+p.dur});used.add(best.i.id);t=best.arr+p.dur;pos=best.i;}
+      const best=cands[0];if(best&&best.s<50){go(best.i);const pd=(S.durs&&S.durs[best.i.id])||p.dur;out.push({type:"pause",k:p.k,n:p.n,it:best.i,start:best.arr,end:best.arr+pd});used.add(best.i.id);t=best.arr+pd;pos=best.i;}
       else{out.push({type:"pause",k:p.k,n:p.n,start:t,end:t+p.dur});t+=p.dur;}continue;}
     const nextP=pauses.find(x=>!x.done),nextE=fixed.find(f=>!f.done);
     const limit=Math.min(end,nextP?nextP.at+40:1e9,nextE?nextE.at-15:1e9);
     let best=null;
-    for(const c of pool){if(used.has(c.id))continue;const lc=legCost(pos,c,o.mode);let arr=t+lc.min+T.buf;const stay=Math.max(15,Math.min(180,Math.round((c.dur||45)*T.f/5)*5));
+    for(const c of pool){if(used.has(c.id))continue;const lc=legCost(pos,c,o.mode);let arr=t+lc.min+T.buf;const stay=S.durs&&S.durs[c.id]?S.durs[c.id]:Math.max(15,Math.min(180,Math.round((c.dur||45)*T.f/5)*5));
       if(!openAt(c,day,arr)){let waited=false;for(let w=10;w<=40;w+=10)if(openAt(c,day,arr+w)){arr+=w;waited=true;break;}if(!waited)continue;}
       let st=stay;if(!openAt(c,day,arr+st-1)){const hf=hoursFor(c,day);const sp=hf&&hf.spans.find(([a,b])=>arr>=a&&arr<b);if(!sp||sp[1]-arr<Math.min(st,45))continue;st=sp[1]-arr-(hf.h&&hf.h.last?0:0);}
       if(arr+st>limit+15)continue;
@@ -1585,7 +1598,8 @@ function renderSuggest(el){const ds=days();const o=S.dt;if(!ds.includes(o.day))o
     const it=x.it;const isP=x.type==="pause";const ev=x.type==="event";
     const cc=it?`var(${it.hol?"--warn":catOf(it).c})`:"var(--muted)";
     return `<div class="tl-item${isP?" pause":""}" style="--cc:${cc}"><div class="tl-t">${hhmm(x.start)}<small>${hhmm(x.end)}</small></div><div class="tl-b">${isP?`<span class="cat">${esc(x.n)}</span>`:ev?`<span class="cat">Event${it.ta?" · Uhrzeit ca.":""}</span>`:""}
-      <b>${it?esc(it.n):esc(x.n)}</b><small>${it?esc(it.a||it.venue||""):""}${x.type==="stop"?` · ${CROWD_L[x.cr]}`:""}${x.sunset?" · zum Sonnenuntergang":""}${it&&priceShort(it.p)?" · "+esc(priceShort(it.p)):""}</small></div>
+      <b>${it?esc(it.n):esc(x.n)}</b><small>${it?esc(it.a||it.venue||""):""}${x.type==="stop"?` · ${CROWD_L[x.cr]}`:""}${x.sunset?" · zum Sonnenuntergang":""}${it&&priceShort(it.p)?" · "+esc(priceShort(it.p)):""}</small>
+      ${it&&!ev?`<div class="tl-dur">${durSelect(it,"tdur-"+it.id)}</div>`:""}</div>
       ${it?`<button class="iconbtn" data-goto="${it.id}" aria-label="Details">${ic("ext")}</button>`:""}</div>`;}).join("");
   const sel=(id,v,opts)=>`<select class="sel" id="${id}" data-act="dt">${opts.map(([k,l])=>`<option value="${k}"${String(v)===String(k)?" selected":""}>${l}</option>`).join("")}</select>`;
   el.innerHTML=`<p class="lede">Sag mir, wann und wie lange du unterwegs sein willst. Ich stelle einen Tag mit Pausen, Öffnungszeiten, Auslastung, Sonnenuntergang und Events zusammen.</p>
@@ -1661,6 +1675,7 @@ document.addEventListener("change",e=>{const t=e.target;const a=t.dataset&&t.dat
   if(a==="r-name"){r.name=t.value.trim()||"Meine Route";}
   else if(a==="r-day"){r.day=t.value;}
   else if(a==="r-add"&&t.value){r.stops.push({id:t.value});t.value="";}
+  else if(a==="r-dur"&&t.value){const st=r.stops[+t.dataset.i];if(st)st.d=+t.value;}
   else if(a==="r-endid"){const p=resolvePoint(t.value);r.end=p?{n:p.n,lat:p.lat,lon:p.lon,ref:t.value}:{pending:true};}
   save();renderPlan();});
 

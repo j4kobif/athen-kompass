@@ -119,16 +119,22 @@ function kChips(scope){const list=ITEMS.filter(i=>i.c==="food"||i.c==="cafe");
   const opts=[["","Alle"],...KUECHE.map(k=>[k[0],k[1],k[2]]),["vegan","100 % vegan","leaf"]].filter(o=>!o[0]||list.some(i=>kOk(i,o[0])));
   return `<div class="chips" role="group" aria-label="Küche">${opts.map(([k,l,icn])=>`<button class="chip" data-kueche="${k}" aria-pressed="${(S.kueche||"")===k}">${icn?ic(icn):""}${l}${k?` <small class="cnt">${list.filter(i=>kOk(i,k)&&(!S.vegan||i.diet?.vegan)).length}</small>`:""}</button>`).join("")}</div>`;}
 function kBadges(it){return (it.k||[]).map(k=>`<span class="b kb">${KLABEL[k]}</span>`).join("");}
+// Eigene Zeit pro Aktivität (S.durs[id] in Minuten), sonst Vorschlag aus den Daten
+function durOf(it){const v=S.durs&&S.durs[it.id];return v||it.dur||45;}
+function fmtDur(m){return m>=60?(Math.round(m/15)/4).toString().replace(".",",")+" h":m+" Min.";}
+function durSelect(it,id,cls){const cur=S.durs&&S.durs[it.id]||"";const sug=it.dur||45;const max=it.c==="trip"?720:360;
+  const vals=[15,20,30,45,60,75,90,120,150,180,240,300,360,480,600,720].filter(v=>v<=max);if(cur&&!vals.includes(cur))vals.push(cur);vals.sort((a,b)=>a-b);
+  return `<select class="sel small${cls?" "+cls:""}" id="${id}" data-dur="${it.id}" aria-label="Zeit einplanen für ${esc(it.n)}"><option value="">⏱ Vorschlag: ${fmtDur(sug)}</option>${vals.map(v=>`<option value="${v}"${+cur===v?" selected":""}>⏱ ${fmtDur(v)}${v===sug?" (Vorschlag)":""}</option>`).join("")}</select>`;}
 function isDim(it){if(S.rain&&it.in===false)return true;if(it.season&&!months().some(m=>it.season.includes(m)))return true;return false;}
 function itemCard(it){const cat=catOf(it);const dim=isDim(it);
   const seasonOff=it.season&&!months().some(m=>it.season.includes(m));
   const closedDays=(it.closed||[]).map(x=>WDL[x]).join(", ");
   const alt=S.rain&&it.in===false&&it.alt?byId(it.alt):null;
   const fd=freeDays();const freeHit=it.eu25?Object.keys(fd).filter(k=>fd[k].includes("staatliche")).map(k=>fmt(k)).join(", "):"";
-  const dur=it.dur?(it.dur>=60?(Math.round(it.dur/30)/2).toString().replace(".",",")+" h":it.dur+" Min."):"";
+  const own=S.durs&&S.durs[it.id];const dur=own?fmtDur(own):it.dur?fmtDur(it.dur):"";
   return `<article class="card${dim?" dim":""}${hlId===it.id?" hl":""}" id="card-${it.id}" style="--cc:var(${cat.c})">
    <div class="card-h">${tile(it)}<div class="t"><div class="cat">${cat.n}</div><h3>${esc(it.n)}</h3>
-   <div class="meta"><span>${esc(it.a)}</span>${dur?`<span class="dur" title="Geschätzte Aufenthaltsdauer vor Ort">${ic("clock")}ca. ${dur} vor Ort</span>`:""}</div></div></div>
+   <div class="meta"><span>${esc(it.a)}</span>${dur?`<span class="dur${own?" own":""}" title="${own?"Deine eingeplante Zeit":"Geschätzte Aufenthaltsdauer vor Ort"}">${ic("clock")}${own?`${dur} eingeplant`:`ca. ${dur} vor Ort`}</span>`:""}</div></div></div>
    <div class="badges">${doneBadge(it.id)}${kBadges(it)}${priceBadge(it.p)}${inBadge(it)}${it.eu25?'<span class="b free">EU unter 25: frei</span>':""}${dietBadges(it)}${seasonOff?'<span class="b warn">im Zeitraum geschlossen</span>':""}${closedDays?`<span class="b warn">${closedDays} geschlossen</span>`:""}</div>
    ${distRow(it)}
    <p>${esc(it.d)}</p>
@@ -138,6 +144,7 @@ function itemCard(it){const cat=catOf(it);const dim=isDim(it);
    ${freeHit?`<div class="tip"><b>Gratis in deinem Zeitraum:</b> ${freeHit}</div>`:""}
    ${alt?`<div class="altline">${ic("umbrella")}<span>Bei Regen besser: <button data-goto="${alt.id}">${esc(alt.n)}</button>${alt.p&&alt.p.t?" · "+esc(alt.p.t):""}</span></div>`:""}
    <div class="actions">${planBtn(it.id)}<a class="btn" href="${mapsLink(it)}" target="_blank" rel="noopener">${ic("pin")}Karte</a>${it.url?`<a class="btn ghost" href="${esc(it.url)}" target="_blank" rel="noopener">${ic("ext")}Website</a>`:""}</div>
+   <div class="durrow"><span>Zeit vor Ort einplanen</span>${durSelect(it,"dur-"+it.id)}</div>
    ${diaryBlock(it)}
   </article>`;}
 function heroHtml(){const ds=days();const t=todayIso();const h=new Date().getHours();
@@ -305,7 +312,7 @@ function renderPlanList(el){const ds=days();const ids=Object.keys(S.plan).filter
   let tot={km:0,min:0},legs="";
   for(let i=1;i<ordered.length;i++){const c=legCost(ordered[i-1],ordered[i],S.mode);tot.km+=c.km;tot.min+=c.min;const isEnd=ordered[i]._end;
     legs+=`<div class="leg${isEnd?" endleg":""}"><div class="no"${isEnd?' style="background:var(--accent)"':""}>${isEnd?ic("flag"):i+1}</div><div><b>${esc(ordered[i].n)}</b><div class="how">${isEnd?"Ziel · ":""}${esc(c.how)} · <a href="${legLink(ordered[i-1],ordered[i],S.mode)}" target="_blank" rel="noopener">Weg ↗</a></div></div><div class="tm">${kmf(c.km)} km<br>${Math.round(c.min)} Min.</div></div>`;}
-  const stay=ordered.reduce((s,p)=>s+(p._end?0:(p.dur||45)),0);
+  const stay=ordered.reduce((s,p)=>s+(p._end||["me","home"].includes(p.id)?0:durOf(p)),0);
   const ow=ordered.length?onTheWay(ordered,S.mode):[];const gl=gmapsRoute(ordered,S.mode);
   const endSpec=S.routeEnd==="loop"?{loop:true}:(S.routeEnd==="ziel"&&endPoint?{n:endPoint.n,lat:endPoint.lat,lon:endPoint.lon,ref:endPoint.id}:null);
   const real=ordered.filter(p=>!p._end);
@@ -349,7 +356,7 @@ function renderPlanList(el){const ds=days();const ids=Object.keys(S.plan).filter
   order.forEach(dd=>{const key=dd||"none";const list=groups[dd];const done=list.filter(isDone).length;
     html+=`<details class="planday" data-dkey="${key}"${S.collapsed[key]?"":" open"}><summary><span class="pd-t">${dd?fmt(dd,true):"Noch ohne Tag"}</span><span class="pd-n">${list.length} Ziele${done?` · ${done} erlebt`:""}</span></summary><div class="pd-body">${list.map(id=>{const it=byId(id);const st=S.plan[id];const cat=catOf(it);
     return `<div class="pitem${isDone(id)?" done":""}"><input class="check" type="checkbox" id="done-${id}" data-done="${id}"${isDone(id)?" checked":""} aria-label="Erledigt: ${esc(it.n)}">${tile(it,true)}<div class="nm">${esc(it.n)}<small>${cat.n}${it.a?" · "+esc(it.a):it.venue?" · "+esc(it.venue):""}${!hasGeo(it)?" · ohne Standort":""}</small></div><button class="iconbtn" data-plan="${id}" aria-label="Entfernen" title="Entfernen">${ic("trash")}</button>
-     <div class="pmeta"><select class="sel small" id="day-${id}" data-day="${id}" aria-label="Tag wählen">${dayOpts(dd)}</select>${priceBadge(it.p)}${warnFor(it,dd)}</div></div>`;}).join("")}</div></details>`;});
+     <div class="pmeta"><select class="sel small" id="day-${id}" data-day="${id}" aria-label="Tag wählen">${dayOpts(dd)}</select>${durSelect(it,"pdur-"+id)}${priceBadge(it.p)}${warnFor(it,dd)}</div></div>`;}).join("")}</div></details>`;});
   html+=`<button class="btn ghost" id="clearPlan" style="align-self:center">${ic("trash")}Plan leeren</button>`;
   el.innerHTML=html;ordered.forEach(p=>delete p._no);}
 
@@ -472,5 +479,6 @@ document.addEventListener("change",e=>{const t=e.target;
   if(t.id==="routeDay"){S.routeDay=t.value;S.routeStart=null;save();renderPlan();return;}
   if(t.id==="routeStart"){S.routeStart=t.value;save();renderPlan();return;}
   if(t.id==="routeEndId"){S.routeEndId=t.value;save();renderPlan();return;}
+  if(t.dataset.dur){if(!S.durs)S.durs={};if(t.value)S.durs[t.dataset.dur]=+t.value;else delete S.durs[t.dataset.dur];save();renderAll();toast(t.value?`Zeit eingeplant: ${fmtDur(+t.value)}`:"Wieder mein Vorschlag");return;}
 });
 
