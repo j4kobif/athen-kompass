@@ -107,6 +107,7 @@ function planBtn(id,day){return inPlan(id)?`<button class="btn added" data-plan=
 /* ===================== ENTDECKEN ===================== */
 let hlId=null;
 function filteredItems(){const q=S.q.trim().toLowerCase();return ITEMS.filter(it=>{
+  if(S.hideDone&&typeof isDone==="function"&&isDone(it.id))return false;
   const eat=it.c==="food"||it.c==="cafe",eatSel=S.cats.some(c=>c==="food"||c==="cafe");
   if(S.cats.length&&!S.cats.includes(it.c)&&!(S.kueche&&eat&&eatSel))return false;
   if(q&&!(it.n+" "+it.a+" "+it.d+" "+(it.k||[]).map(x=>KLABEL[x]).join(" ")).toLowerCase().includes(q))return false;
@@ -128,7 +129,7 @@ function itemCard(it){const cat=catOf(it);const dim=isDim(it);
   return `<article class="card${dim?" dim":""}${hlId===it.id?" hl":""}" id="card-${it.id}" style="--cc:var(${cat.c})">
    <div class="card-h">${tile(it)}<div class="t"><div class="cat">${cat.n}</div><h3>${esc(it.n)}</h3>
    <div class="meta"><span>${esc(it.a)}</span>${dur?`<span class="dur" title="Geschätzte Aufenthaltsdauer vor Ort">${ic("clock")}ca. ${dur} vor Ort</span>`:""}</div></div></div>
-   <div class="badges">${kBadges(it)}${priceBadge(it.p)}${inBadge(it)}${it.eu25?'<span class="b free">EU unter 25: frei</span>':""}${dietBadges(it)}${seasonOff?'<span class="b warn">im Zeitraum geschlossen</span>':""}${closedDays?`<span class="b warn">${closedDays} geschlossen</span>`:""}</div>
+   <div class="badges">${doneBadge(it.id)}${kBadges(it)}${priceBadge(it.p)}${inBadge(it)}${it.eu25?'<span class="b free">EU unter 25: frei</span>':""}${dietBadges(it)}${seasonOff?'<span class="b warn">im Zeitraum geschlossen</span>':""}${closedDays?`<span class="b warn">${closedDays} geschlossen</span>`:""}</div>
    ${distRow(it)}
    <p>${esc(it.d)}</p>
    ${hoursCrowd(it)}
@@ -137,6 +138,7 @@ function itemCard(it){const cat=catOf(it);const dim=isDim(it);
    ${freeHit?`<div class="tip"><b>Gratis in deinem Zeitraum:</b> ${freeHit}</div>`:""}
    ${alt?`<div class="altline">${ic("umbrella")}<span>Bei Regen besser: <button data-goto="${alt.id}">${esc(alt.n)}</button>${alt.p&&alt.p.t?" · "+esc(alt.p.t):""}</span></div>`:""}
    <div class="actions">${planBtn(it.id)}<a class="btn" href="${mapsLink(it)}" target="_blank" rel="noopener">${ic("pin")}Karte</a>${it.url?`<a class="btn ghost" href="${esc(it.url)}" target="_blank" rel="noopener">${ic("ext")}Website</a>`:""}</div>
+   ${diaryBlock(it)}
   </article>`;}
 function heroHtml(){const ds=days();const t=todayIso();const h=new Date().getHours();
   const greet=h<12?"Καλημέρα":h<18?"Γεια σου":"Καλησπέρα";
@@ -148,7 +150,7 @@ function heroHtml(){const ds=days();const t=todayIso();const h=new Date().getHou
   return `<div class="hero"><svg class="cols" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 22h18M6 18v-7M10 18v-7M14 18v-7M18 18v-7M12 2l8 5H4z"/></svg>
    <div><div class="greet">${greet}</div><h2>${head}</h2><div class="sub">${sub}</div></div>
    ${(()=>{if(!ME||hav(ME,ATHENS)>50)return"";const c=ITEMS.filter(i=>hasGeo(i)&&i.c!=="trip"&&!isDim(i)).map(i=>[i,hav(ME,i)]).sort((a,b)=>a[1]-b[1])[0];if(!c)return"";const w=legCost(ME,c[0],"walk");return `<button class="near" data-goto="${c[0].id}">${ic("locate")}<span>Am nächsten: <b>${esc(c[0].n)}</b> · ${fmtMin(w.min)} zu Fuß</span></button>`;})()}
-   <div class="stats"><button class="stat" data-tab="events"><b>${nEv}</b><span>Events</span></button><button class="stat" data-tab="events"><b>${nFree}</b><span>Gratis-Tage</span></button><button class="stat" data-tab="plan"><b>${nPlan}</b><span>im Plan</span></button></div></div>`;}
+   <div class="stats"><button class="stat" data-tab="events"><b>${nEv}</b><span>Events</span></button><button class="stat" data-tab="events"><b>${nFree}</b><span>Gratis-Tage</span></button><button class="stat" data-tab="plan"><b>${nPlan}</b><span>im Plan</span></button><button class="stat" data-act="gotodiary"><b>${Object.values(S.log||{}).filter(x=>x.done).length+(S.custom||[]).length}</b><span>erlebt</span></button></div></div>`;}
 function renderDiscover(){const el=$("#p-entdecken");const list=filteredItems();
   const near=ME&&S.sort==="near";
   const sorted=[...list].sort((a,b)=>near?((hasGeo(a)?hav(ME,a):1e4)-(hasGeo(b)?hav(ME,b):1e4)):(isDim(a)-isDim(b)));
@@ -160,7 +162,7 @@ function renderDiscover(){const el=$("#p-entdecken");const list=filteredItems();
    <div class="searchbox">${ic("search")}<input id="q" type="search" placeholder="Suchen, z. B. Plaka, vegan, Museum" value="${esc(S.q)}" aria-label="Suchen"></div>
    <div class="chips" role="group" aria-label="Kategorien"><button class="chip" data-cat="" aria-pressed="${S.cats.length===0}">Alle</button>${chips}</div>
    ${S.cats.some(c=>c==="food"||c==="cafe")?kChips():""}
-   <div class="row" style="justify-content:space-between">${ME&&S.view!=="map"?`<div class="seg" role="group" aria-label="Sortierung"><button data-sort="top" aria-pressed="${!near}">Empfohlen</button><button data-sort="near" aria-pressed="${near}">${ic("locate")}Nähe</button></div>`:`<small style="color:var(--muted)">${list.length} Orte${ME?"":" · Standort oben aktivieren für Wegzeiten"}</small>`}<div class="seg" role="group" aria-label="Ansicht"><button data-view="list" aria-pressed="${S.view!=="map"}">${ic("list")}Liste</button><button data-view="map" aria-pressed="${S.view==="map"}">${ic("map")}Karte</button></div></div>
+   <div class="row" style="justify-content:space-between">${ME&&S.view!=="map"?`<div class="seg" role="group" aria-label="Sortierung"><button data-sort="top" aria-pressed="${!near}">Empfohlen</button><button data-sort="near" aria-pressed="${near}">${ic("locate")}Nähe</button></div>`:`<small style="color:var(--muted)">${list.length} Orte${ME?"":" · Standort oben aktivieren für Wegzeiten"}</small>`}<button class="chip" data-act="hidedone" aria-pressed="${!!S.hideDone}">${ic("check")}Erlebtes ausblenden</button><div class="seg" role="group" aria-label="Ansicht"><button data-view="list" aria-pressed="${S.view!=="map"}">${ic("list")}Liste</button><button data-view="map" aria-pressed="${S.view==="map"}">${ic("map")}Karte</button></div></div>
    ${S.view==="map"?`<div class="mapbox">${mapSVG(list,{hl:hlId,dimIds})}${mapCaption()}</div>${sel?itemCard(sel):`<div class="tip" style="text-align:center">Tippe auf einen Punkt für Details.</div>`}`
    :`<div class="list">${sorted.length?sorted.map(itemCard).join(""):`<div class="empty">${ic("search")}Keine Treffer. Filter zurücksetzen?</div>`}</div>`}`;
   const q=$("#q");q.addEventListener("input",()=>{S.q=q.value;save();const pos=q.selectionStart;renderDiscover();const n=$("#q");n.focus();n.setSelectionRange(pos,pos);});}
@@ -191,7 +193,7 @@ function renderEvents(){const el=$("#p-events");const ds=days();const fd=freeDay
   el.innerHTML=html;}
 function eventCard(e,dayIso){const dim=S.rain&&e.in===false;const multi=e.s!==e.e?`${fmt(e.s)} – ${fmt(e.e)}`:fmt(e.s);const cc=e.hol?"--warn":"--c-event";
   return `<article class="card${dim?" dim":""}" id="card-${e.id}" style="--cc:var(${cc})"><div class="card-h">${tile(e)}<div class="t"><div class="cat">${e.hol?"Feiertag / Gedenktag":"Event"}</div><h3>${esc(e.n)}</h3><div class="meta"><span>${multi}</span><span>${esc(e.venue)}</span></div></div></div>
-   <div class="badges">${priceBadge(e.p)}${inBadge(e)}</div>${distRow(e)}<p>${esc(e.d)}</p>
+   <div class="badges">${doneBadge(e.id)}${priceBadge(e.p)}${inBadge(e)}</div>${distRow(e)}<p>${esc(e.d)}</p>
    <div class="actions">${e.hol&&!hasGeo(e)?"":planBtn(e.id,dayIso>=e.s&&dayIso<=e.e?dayIso:e.s)}<a class="btn" href="${mapsLink({n:e.venue,lat:e.lat,lon:e.lon})}" target="_blank" rel="noopener">${ic("pin")}Ort</a>${e.p&&e.p.u?`<a class="btn ghost" href="${esc(e.p.u)}" target="_blank" rel="noopener">${ic("ext")}Infos</a>`:""}</div></article>`;}
 
 /* ===================== ESSEN ===================== */
@@ -286,10 +288,10 @@ function renderPlanList(el){const ds=days();const ids=Object.keys(S.plan).filter
    <div class="tip">Reihenfolge per Nächster-Nachbar plus 2-opt optimiert. Zeiten sind Schätzungen.${S.mode==="transit"?" Google Maps unterstützt bei Öffis keine Zwischenstopps, nutze dafür die Links pro Abschnitt.":""}</div>`}
    ${ow.length?`<div><h3 style="font-size:1rem;margin-bottom:4px">Liegt auf dem Weg</h3><div class="legs">${ow.map(([i,dist])=>`<div class="leg" style="grid-template-columns:38px minmax(0,1fr) auto;align-items:center">${tile(i,true)}<div><b>${esc(i.n)}</b><div class="how">${catOf(i).n} · ${Math.round(dist*1000)} m Umweg${i.p&&i.p.t?" · "+esc(i.p.t):""}</div></div><div>${planBtn(i.id,S.routeDay!=="all"?S.routeDay:"")}</div></div>`).join("")}</div></div>`:""}
   </div></details>
-  <div class="row" style="justify-content:space-between"><small style="color:var(--muted)">${ids.length} Ziele · ${ids.filter(i=>S.plan[i].done).length} erledigt</small><button class="btn ghost" data-act="foldall">${ic(order.some(x=>S.collapsed[x||"none"])?"down":"up")}${order.some(x=>S.collapsed[x||"none"])?"Alle aufklappen":"Alle einklappen"}</button></div>`;
-  order.forEach(dd=>{const key=dd||"none";const list=groups[dd];const done=list.filter(i=>S.plan[i].done).length;
-    html+=`<details class="planday" data-dkey="${key}"${S.collapsed[key]?"":" open"}><summary><span class="pd-t">${dd?fmt(dd,true):"Noch ohne Tag"}</span><span class="pd-n">${list.length} Ziele${done?` · ${done} erledigt`:""}</span></summary><div class="pd-body">${list.map(id=>{const it=byId(id);const st=S.plan[id];const cat=catOf(it);
-    return `<div class="pitem${st.done?" done":""}"><input class="check" type="checkbox" id="done-${id}" data-done="${id}"${st.done?" checked":""} aria-label="Erledigt: ${esc(it.n)}">${tile(it,true)}<div class="nm">${esc(it.n)}<small>${cat.n}${it.a?" · "+esc(it.a):it.venue?" · "+esc(it.venue):""}${!hasGeo(it)?" · ohne Standort":""}</small></div><button class="iconbtn" data-plan="${id}" aria-label="Entfernen" title="Entfernen">${ic("trash")}</button>
+  <div class="row" style="justify-content:space-between"><small style="color:var(--muted)">${ids.length} Ziele · ${ids.filter(isDone).length} erlebt</small><button class="btn ghost" data-act="foldall">${ic(order.some(x=>S.collapsed[x||"none"])?"down":"up")}${order.some(x=>S.collapsed[x||"none"])?"Alle aufklappen":"Alle einklappen"}</button></div>`;
+  order.forEach(dd=>{const key=dd||"none";const list=groups[dd];const done=list.filter(isDone).length;
+    html+=`<details class="planday" data-dkey="${key}"${S.collapsed[key]?"":" open"}><summary><span class="pd-t">${dd?fmt(dd,true):"Noch ohne Tag"}</span><span class="pd-n">${list.length} Ziele${done?` · ${done} erlebt`:""}</span></summary><div class="pd-body">${list.map(id=>{const it=byId(id);const st=S.plan[id];const cat=catOf(it);
+    return `<div class="pitem${isDone(id)?" done":""}"><input class="check" type="checkbox" id="done-${id}" data-done="${id}"${isDone(id)?" checked":""} aria-label="Erledigt: ${esc(it.n)}">${tile(it,true)}<div class="nm">${esc(it.n)}<small>${cat.n}${it.a?" · "+esc(it.a):it.venue?" · "+esc(it.venue):""}${!hasGeo(it)?" · ohne Standort":""}</small></div><button class="iconbtn" data-plan="${id}" aria-label="Entfernen" title="Entfernen">${ic("trash")}</button>
      <div class="pmeta"><select class="sel small" id="day-${id}" data-day="${id}" aria-label="Tag wählen">${dayOpts(dd)}</select>${priceBadge(it.p)}${warnFor(it,dd)}</div></div>`;}).join("")}</div></details>`;});
   html+=`<button class="btn ghost" id="clearPlan" style="align-self:center">${ic("trash")}Plan leeren</button>`;
   el.innerHTML=html;ordered.forEach(p=>delete p._no);}
@@ -399,7 +401,7 @@ document.addEventListener("change",e=>{const t=e.target;
   if(t.id==="dStart"||t.id==="dEnd"){setDate(t);return;}
   const map={tRain:"rain",tRain2:"rain",tVeg:"veg",tVegan:"vegan",tLf:"lf"};
   if(map[t.id]){S[map[t.id]]=t.checked;if(t.id==="tVegan"&&t.checked)S.veg=true;if(t.id==="tVeg"&&!t.checked)S.vegan=false;save();renderAll();if(t.id==="tRain")toast(t.checked?"Regentag-Modus an":"Regentag-Modus aus");return;}
-  if(t.dataset.done){S.plan[t.dataset.done].done=t.checked;save();renderPlan();return;}
+  if(t.dataset.done){setDone(t.dataset.done,t.checked);toast(t.checked?"Erlebt – Sterne und Notiz unter Plan › Erlebt":"Nicht mehr als erlebt markiert");renderAll();return;}
   if(t.dataset.day&&t.tagName==="SELECT"){S.plan[t.dataset.day].day=t.value;S.sample=false;save();renderPlan();return;}
   if(t.id==="routeDay"){S.routeDay=t.value;S.routeStart=null;save();renderPlan();return;}
   if(t.id==="routeStart"){S.routeStart=t.value;save();renderPlan();return;}
