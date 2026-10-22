@@ -333,6 +333,14 @@ textarea.note{width:100%;min-width:0;border:1px solid var(--line);background:var
 .stats{grid-template-columns:repeat(4,minmax(0,1fr))!important}
 .seg.wide{grid-template-columns:repeat(4,minmax(0,1fr))!important}
 .seg.wide button{padding:9px 2px;font-size:.8rem}
+/* routenende */
+.endbox{display:flex;flex-direction:column;gap:8px}
+.rlabel{font-size:.74rem;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+.seg.wide3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%}
+.seg.wide3 button{flex-direction:column;justify-content:center;gap:0;padding:7px 4px;line-height:1.2}
+.seg.wide3 button small{font-family:var(--f-mono);font-size:.7rem;color:var(--muted);font-weight:500}
+.leg .no svg.i{width:14px;height:14px;stroke-width:2.5}
+.tl-item.finish .cat{display:inline-flex;align-items:center;gap:4px}.tl-item.finish .cat svg.i{width:12px;height:12px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--navh) + 14px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:.85rem;font-weight:600;z-index:40;opacity:0;transition:opacity .2s;pointer-events:none;max-width:calc(100% - 32px);text-align:center}
 .toast.show{opacity:1}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}

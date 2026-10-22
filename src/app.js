@@ -91,7 +91,7 @@ function mapSVG(points,{route=null,hl=null,dimIds=new Set()}={}){
   let g=baseMap();
   if(route&&route.length>1){const pts=route.filter(onMap).map(r=>prj(r.lat,r.lon).map(v=>v.toFixed(1)).join(",")).join(" ");
     g+=`<polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="3.5" stroke-dasharray="1 7" stroke-linecap="round"/>`;}
-  points.filter(onMap).filter(it=>it.id!=="me").forEach(it=>{const [x,y]=prj(it.lat,it.lon);const col=`var(${catOf(it).c})`;
+  points.filter(onMap).filter(it=>it.id!=="me"&&!it._loop).forEach(it=>{const [x,y]=prj(it.lat,it.lon);const col=it._end?"var(--accent)":`var(${catOf(it).c})`;
     const cls=["marker",dimIds.has(it.id)?"dim":"",hl===it.id?"hl":""].join(" ");
     const num=it._no?`<text x="${x.toFixed(1)}" y="${(y+3.5).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="800" fill="var(--bg)" font-family="Commissioner,sans-serif">${it._no}</text>`:"";
     g+=`<g class="${cls}" data-id="${it.id}" tabindex="0" role="button" aria-label="${esc(it.n)}"><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${it._no?10:hl===it.id?9:7}" fill="${col}"/>${num}<title>${esc(it.n)}</title></g>`;});
@@ -231,6 +231,22 @@ function optimize(pts,startId){if(pts.length<3)return pts;
   const len=o=>o.reduce((s,p,i)=>i?s+hav(o[i-1],p):0,0);let improved=true,guard=0;
   while(improved&&guard++<60){improved=false;for(let i=1;i<order.length-1;i++)for(let k=i+1;k<order.length;k++){const n=[...order.slice(0,i),...order.slice(i,k+1).reverse(),...order.slice(k+1)];if(len(n)+1e-9<len(order)){order.splice(0,order.length,...n);improved=true;}}}
   return order;}
+// Route mit festem Ende: tail = Startpunkt (Rundweg) oder ein Zielort; Start bleibt fix
+function optimizeTo(pts,startId,tail){if(!tail)return optimize(pts,startId);
+  const start=pts.find(p=>p.id===startId)||pts[0];if(!start)return [];const rest=pts.filter(p=>p!==start&&!(tail.id&&p.id===tail.id));const order=[start];
+  while(rest.length){const last=order[order.length-1];let bi=0,bd=1e9;rest.forEach((p,i)=>{const dd=hav(last,p)+0.35*hav(p,tail);if(dd<bd){bd=dd;bi=i;}});order.push(rest.splice(bi,1)[0]);}
+  const len=o=>o.reduce((s,p,i)=>i?s+hav(o[i-1],p):0,0)+hav(o[o.length-1],tail);let improved=true,guard=0;
+  while(improved&&guard++<60){improved=false;for(let i=1;i<order.length-1;i++)for(let k=i+1;k<order.length;k++){const n=[...order.slice(0,i),...order.slice(i,k+1).reverse(),...order.slice(k+1)];if(len(n)+1e-9<len(order)){order.splice(0,order.length,...n);improved=true;}}}
+  return order;}
+function endChoices(){const g=[];if(S.home)g.push(["home","🏠 Unterkunft"]);if(ME)g.push(["me","📍 Mein Standort (jetzt)"]);return g;}
+function endOptions(sel,extraIds){const groups={};ITEMS.filter(hasGeo).forEach(i=>{(groups[i.c]=groups[i.c]||[]).push(i);});
+  const top=endChoices().map(([k,l])=>`<option value="${k}"${sel===k?" selected":""}>${l}</option>`).join("");
+  const plan=(extraIds||[]).map(byId).filter(hasGeo);
+  return `<option value="">Ziel wählen …</option>${top}${plan.length?`<optgroup label="Aus deinem Plan">${plan.map(i=>`<option value="${i.id}"${sel===i.id?" selected":""}>${esc(i.n)}</option>`).join("")}</optgroup>`:""}`+
+    Object.entries(groups).map(([c,l])=>`<optgroup label="${CATS[c].n}">${l.map(i=>`<option value="${i.id}"${sel===i.id&&!plan.includes(i)?" selected":""}>${esc(i.n)}</option>`).join("")}</optgroup>`).join("");}
+function resolvePoint(id){if(!id)return null;if(id==="home"&&S.home)return {id:"home",n:"Unterkunft",lat:S.home.lat,lon:S.home.lon,dur:0};
+  if(id==="me"&&ME)return {id:"me",n:"Mein Standort",lat:ME.lat,lon:ME.lon,dur:0};const it=byId(id);return it&&hasGeo(it)?it:null;}
+function pathCost(list,mode){let km=0,min=0;for(let i=1;i<list.length;i++){const c=legCost(list[i-1],list[i],mode);km+=c.km;min+=c.min;}return {km,min};}
 function segDist(p,a,b){const kx=111.32*Math.cos(p.lat*Math.PI/180),ky=110.57;const ax=a.lon*kx,ay=a.lat*ky,bx=b.lon*kx,by=b.lat*ky,px=p.lon*kx,py=p.lat*ky;const dx=bx-ax,dy=by-ay;const L=dx*dx+dy*dy;let t=L?((px-ax)*dx+(py-ay)*dy)/L:0;t=Math.max(0,Math.min(1,t));return Math.hypot(px-(ax+t*dx),py-(ay+t*dy));}
 function onTheWay(order,mode){const lim=mode==="walk"?0.25:mode==="car"?0.8:0.4;const ids=new Set(order.map(o=>o.id));const out=[];
   ITEMS.filter(i=>hasGeo(i)&&!ids.has(i.id)&&i.c!=="trip").forEach(i=>{let best=1e9;for(let k=1;k<order.length;k++)best=Math.min(best,segDist(i,order[k-1],order[k]));if(order.length===1)best=hav(i,order[0]);if(best<=lim&&!(S.rain&&i.in===false))out.push([i,best]);});
@@ -262,28 +278,48 @@ function renderPlanList(el){const ds=days();const ids=Object.keys(S.plan).filter
   const routeDays=["all",...order.filter(x=>x)];if(!routeDays.includes(S.routeDay))S.routeDay="all";
   let pts=ids.map(byId).filter(hasGeo).filter(it=>S.routeDay==="all"||S.plan[it.id].day===S.routeDay);
   if(S.mode==="walk")pts=pts.filter(p=>p.c!=="trip");
-  const cand=pts;const meObj=ME?{id:"me",n:"Mein Standort",lat:ME.lat,lon:ME.lon,dur:0,a:""}:null;
-  if(meObj&&S.routeStart==="me")pts=[meObj,...pts];
+  const cand=pts;const meObj=ME?{id:"me",n:"Mein Standort",lat:ME.lat,lon:ME.lon,dur:0,a:""}:null;const homeObj=S.home?{id:"home",n:"Unterkunft",lat:S.home.lat,lon:S.home.lon,dur:0,a:""}:null;
+  if(meObj&&S.routeStart==="me")pts=[meObj,...pts];if(homeObj&&S.routeStart==="home")pts=[homeObj,...pts];
   const startSel=S.routeStart&&pts.find(p=>p.id===S.routeStart)?S.routeStart:(pts[0]&&pts[0].id);
-  const ordered=optimize(pts,startSel);ordered.forEach((p,i)=>p._no=i+1);
+  // Routenende: offen | Rundweg | Ziel
+  if(!S.routeEnd)S.routeEnd="open";
+  const startObj=pts.find(p=>p.id===startSel);
+  const endPoint=S.routeEnd==="ziel"?resolvePoint(S.routeEndId):null;
+  const variant=(mode)=>{if(!startObj)return null;if(mode==="loop"){const back=Object.assign({},startObj,{id:"_back",n:`Zurück zum Start: ${startObj.n}`,dur:0,_end:true,_loop:true});const o=optimizeTo(pts,startSel,startObj);return [...o,back];}
+    if(mode==="ziel"&&endPoint){const tail=Object.assign(Object.create(endPoint),{id:endPoint.id,_end:true,dur:0});const o=optimizeTo(pts,startSel,endPoint);return [...o,tail];}
+    return optimize(pts,startSel);};
+  const vOpen=variant("open"),vLoop=variant("loop");
+  const ordered=variant(S.routeEnd==="ziel"&&!endPoint?"open":S.routeEnd)||[];ordered.forEach((p,i)=>p._no=i+1);
+  const cOpen=vOpen?pathCost(vOpen,S.mode):{min:0},cLoop=vLoop?pathCost(vLoop,S.mode):{min:0};
   let tot={km:0,min:0},legs="";
-  for(let i=1;i<ordered.length;i++){const c=legCost(ordered[i-1],ordered[i],S.mode);tot.km+=c.km;tot.min+=c.min;
-    legs+=`<div class="leg"><div class="no">${i+1}</div><div><b>${esc(ordered[i].n)}</b><div class="how">${esc(c.how)} · <a href="${legLink(ordered[i-1],ordered[i],S.mode)}" target="_blank" rel="noopener">Weg ↗</a></div></div><div class="tm">${kmf(c.km)} km<br>${Math.round(c.min)} Min.</div></div>`;}
-  const stay=ordered.reduce((s,p)=>s+(p.dur||45),0);
+  for(let i=1;i<ordered.length;i++){const c=legCost(ordered[i-1],ordered[i],S.mode);tot.km+=c.km;tot.min+=c.min;const isEnd=ordered[i]._end;
+    legs+=`<div class="leg${isEnd?" endleg":""}"><div class="no"${isEnd?' style="background:var(--accent)"':""}>${isEnd?ic("flag"):i+1}</div><div><b>${esc(ordered[i].n)}</b><div class="how">${isEnd?"Ziel · ":""}${esc(c.how)} · <a href="${legLink(ordered[i-1],ordered[i],S.mode)}" target="_blank" rel="noopener">Weg ↗</a></div></div><div class="tm">${kmf(c.km)} km<br>${Math.round(c.min)} Min.</div></div>`;}
+  const stay=ordered.reduce((s,p)=>s+(p._end?0:(p.dur||45)),0);
   const ow=ordered.length?onTheWay(ordered,S.mode):[];const gl=gmapsRoute(ordered,S.mode);
+  const endSpec=S.routeEnd==="loop"?{loop:true}:(S.routeEnd==="ziel"&&endPoint?{n:endPoint.n,lat:endPoint.lat,lon:endPoint.lon,ref:endPoint.id}:null);
+  const real=ordered.filter(p=>!p._end);
   LAST_ORDER=ordered.length>1?{name:S.routeDay==="all"?"Meine Athen-Route":`Route ${fmt(S.routeDay)}`,day:S.routeDay==="all"?"":S.routeDay,mode:S.mode,
-    start:ordered[0].id==="me"?{n:"Mein Standort",lat:ordered[0].lat,lon:ordered[0].lon}:null,stops:ordered.filter(p=>p.id!=="me").map(p=>({id:p.id}))}:null;
+    start:["me","home"].includes(real[0].id)?{n:real[0].n,lat:real[0].lat,lon:real[0].lon}:null,stops:real.filter(p=>!["me","home"].includes(p.id)).map(p=>({id:p.id})),end:endSpec}:null;
+  const startIsBase=["me","home"].includes(startSel);
+  const dLoop=Math.round(cLoop.min-cOpen.min);
+  const endHint=!vOpen||vOpen.length<2?"":S.routeEnd==="open"?(startIsBase?`<b>Tipp:</b> Du startest bei ${startSel==="home"?"deiner Unterkunft":"deinem Standort"} – als Rundweg kommst du für nur ${fmtMin(Math.max(1,dLoop))} mehr wieder dorthin zurück.`:dLoop<=20?`<b>Tipp:</b> Ein Rundweg zurück zum Start kostet nur ${fmtMin(Math.max(1,dLoop))} mehr.`:`Die Route endet beim letzten Ziel. Zurück zum Start wären es ${fmtMin(dLoop)} mehr.`)
+    :S.routeEnd==="loop"?`Rundweg: Die Reihenfolge ist so gewählt, dass du am Ende wieder bei „${esc(startObj.n)}“ bist (${dLoop>0?"+"+fmtMin(dLoop):"ohne Umweg"} gegenüber offen).`
+    :endPoint?`Die Reihenfolge ist so gewählt, dass du zum Schluss bei „${esc(endPoint.n)}“ ankommst.`:"Wähle einen Ort, an dem du am Ende landen möchtest – z. B. ein Restaurant, eine Bar oder deine Unterkunft.";
   let html=`${S.sample?`<div class="notice">${ic("alert")}<span><b>Beispielplan</b> zum Ausprobieren. Entferne Einträge oder füge eigene hinzu, dann gehört er dir.</span></div>`:""}
   <details class="routebox fold" id="routeFold"${S.collapsed.__route?"":" open"}><summary><h2>${ic("route")}Route berechnen</h2>${ordered.length>1?`<small>${kmf(tot.km)} km · ${fmtMin(tot.min)}</small>`:""}</summary><div class="foldbody">
    <div class="row"><select id="routeDay" class="sel" aria-label="Tag für die Route">${routeDays.map(x=>`<option value="${x}"${S.routeDay===x?" selected":""}>${x==="all"?"Alle Ziele im Plan":fmt(x,true)}</option>`).join("")}</select>
    <div class="seg" role="group" aria-label="Verkehrsmittel">${[["walk","Zu Fuß"],["transit","Öffis"],["car","Auto"]].map(m=>`<button data-mode="${m[0]}" aria-pressed="${S.mode===m[0]}">${m[1]}</button>`).join("")}</div></div>
-   ${cand.length>1||(meObj&&cand.length)?`<div class="row"><label for="routeStart" style="font-size:.82rem;color:var(--muted);font-weight:700">Start</label><select id="routeStart" class="sel">${meObj?`<option value="me"${startSel==="me"?" selected":""}>📍 Mein Standort</option>`:""}${cand.map(p=>`<option value="${p.id}"${p.id===startSel?" selected":""}>${esc(p.n)}</option>`).join("")}</select>${meObj?"":`<button class="btn ghost" id="locBtn2">${ic("locate")}Ab meinem Standort</button>`}</div>`:""}
+   ${cand.length>1||((meObj||homeObj)&&cand.length)?`<div class="row"><label for="routeStart" class="rlabel">Start</label><select id="routeStart" class="sel">${homeObj?`<option value="home"${startSel==="home"?" selected":""}>🏠 Unterkunft</option>`:""}${meObj?`<option value="me"${startSel==="me"?" selected":""}>📍 Mein Standort</option>`:""}${cand.map(p=>`<option value="${p.id}"${p.id===startSel?" selected":""}>${esc(p.n)}</option>`).join("")}</select>${meObj?"":`<button class="btn ghost" id="locBtn2">${ic("locate")}Ab meinem Standort</button>`}</div>
+   <div class="endbox"><div class="rlabel">Ende der Route</div>
+    <div class="seg wide3" role="group" aria-label="Ende der Route">${[["open","Offen",vOpen&&vOpen.length>1?fmtMin(cOpen.min):""],["loop","Rundweg",vLoop&&vLoop.length>1?(dLoop>0?"+"+fmtMin(dLoop):"±0"):""],["ziel","Mit Ziel",""]].map(([k,l,sub])=>`<button data-rend="${k}" aria-pressed="${S.routeEnd===k}"><span>${l}</span>${sub?`<small>${sub}</small>`:""}</button>`).join("")}</div>
+    ${S.routeEnd==="ziel"?`<select id="routeEndId" class="sel" aria-label="Zielort">${endOptions(S.routeEndId,Object.keys(S.plan))}</select>`:""}
+    ${endHint?`<div class="tip">${endHint}</div>`:""}</div>`:""}
    ${S.mode==="walk"&&ids.map(byId).some(p=>p.c==="trip")?`<div class="tip">Tagesausflüge sind zu Fuß ausgeblendet, wähle Öffis oder Auto.</div>`:""}
    ${ordered.length<2?`<div class="empty">${ic("pin")}Für eine Route brauchst du mindestens zwei Ziele mit Standort${S.routeDay!=="all"?" an diesem Tag":""}.</div>`:`
    <div class="sumgrid"><div><b>${kmf(tot.km)} km</b><span>Wege ≈</span></div><div><b>${Math.round(tot.min)} Min.</b><span>unterwegs ≈</span></div><div><b>${kmf(stay/60)} h</b><span>vor Ort ≈</span></div><div><b>${kmf((tot.min+stay)/60)} h</b><span>gesamt ≈</span></div></div>
    ${(tot.min+stay)>600?`<div class="notice warn">${ic("alert")}<span><b>Viel für einen Tag:</b> über 10 Stunden. Verteile die Ziele auf mehrere Tage oder nutze den Tagesvorschlag.</span></div>`:""}
    <div class="mapbox">${mapSVG(ordered,{route:ordered})}${mapCaption()}</div>
-   <div class="legs"><div class="leg"><div class="no"${ordered[0].id==="me"?' style="background:var(--rain)"':""}>1</div><div><b>${esc(ordered[0].n)}</b><div class="how">Start</div></div><div class="tm"></div></div>${legs}</div>
+   <div class="legs"><div class="leg"><div class="no"${["me","home"].includes(ordered[0].id)?' style="background:var(--rain)"':""}>1</div><div><b>${esc(ordered[0].n)}</b><div class="how">Start</div></div><div class="tm"></div></div>${legs}</div>
    <div class="actions"><button class="btn primary" data-act="saveplan">${ic("bookmark")}Route speichern</button>${LAST_ORDER?shareBtns(LAST_ORDER,"plan"):""}${gl?`<a class="btn ghost" href="${gl}" target="_blank" rel="noopener">${ic("map")}Google Maps</a>`:""}</div>
    <div class="tip">Reihenfolge per Nächster-Nachbar plus 2-opt optimiert. Zeiten sind Schätzungen.${S.mode==="transit"?" Google Maps unterstützt bei Öffis keine Zwischenstopps, nutze dafür die Links pro Abschnitt.":""}</div>`}
    ${ow.length?`<div><h3 style="font-size:1rem;margin-bottom:4px">Liegt auf dem Weg</h3><div class="legs">${ow.map(([i,dist])=>`<div class="leg" style="grid-template-columns:38px minmax(0,1fr) auto;align-items:center">${tile(i,true)}<div><b>${esc(i.n)}</b><div class="how">${catOf(i).n} · ${Math.round(dist*1000)} m Umweg${i.p&&i.p.t?" · "+esc(i.p.t):""}</div></div><div>${planBtn(i.id,S.routeDay!=="all"?S.routeDay:"")}</div></div>`).join("")}</div></div>`:""}
@@ -372,7 +408,7 @@ function renderAll(){syncControls();renderDiscover();renderEvents();renderFood()
 function openSheet(o){$("#sheet").hidden=!o;$("#scrim").hidden=!o;if(o)$("#dStart").focus();else $("#openSettings").focus();}
 
 document.addEventListener("click",e=>{
-  const t=e.target.closest("#locBtn,#locBtn2,[data-sort],[data-kueche],[data-tab],[data-cat],[data-plan],[data-goto],[data-mode],[data-view],.marker,#clearPlan,#openSettings,#closeSettings,#doneSettings,#scrim");if(!t)return;
+  const t=e.target.closest("#locBtn,#locBtn2,[data-rend],[data-sort],[data-kueche],[data-tab],[data-cat],[data-plan],[data-goto],[data-mode],[data-view],.marker,#clearPlan,#openSettings,#closeSettings,#doneSettings,#scrim");if(!t)return;
   if(t.id==="locBtn"){locate();return;}
   if(t.id==="locBtn2"){S.routeStart="me";save();locate();return;}
   if(t.dataset.sort){S.sort=t.dataset.sort;save();renderDiscover();return;}
@@ -384,6 +420,7 @@ document.addEventListener("click",e=>{
   if(t.dataset.cat!==undefined){const c=t.dataset.cat;if(!c)S.cats=[];else S.cats=S.cats.includes(c)?S.cats.filter(x=>x!==c):[...S.cats,c];save();renderDiscover();return;}
   if(t.dataset.plan){togglePlan(t.dataset.plan,t.dataset.day);return;}
   if(t.dataset.mode){S.mode=t.dataset.mode;save();renderPlan();return;}
+  if(t.dataset.rend){S.routeEnd=t.dataset.rend;save();renderPlan();return;}
   if(t.id==="clearPlan"){S.plan={};S.sample=false;save();renderAll();toast("Plan geleert");return;}
   if(t.classList.contains("marker")&&S.tab==="entdecken"){hlId=t.dataset.id;renderDiscover();return;}
   const id=t.dataset.goto||t.dataset.id;if(id)goTo(id);
@@ -405,5 +442,6 @@ document.addEventListener("change",e=>{const t=e.target;
   if(t.dataset.day&&t.tagName==="SELECT"){S.plan[t.dataset.day].day=t.value;S.sample=false;save();renderPlan();return;}
   if(t.id==="routeDay"){S.routeDay=t.value;S.routeStart=null;save();renderPlan();return;}
   if(t.id==="routeStart"){S.routeStart=t.value;save();renderPlan();return;}
+  if(t.id==="routeEndId"){S.routeEndId=t.value;save();renderPlan();return;}
 });
 
