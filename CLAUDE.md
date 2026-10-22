@@ -26,15 +26,17 @@ src/shell.html   Markup, CSS, SVG-Icons (Bottom-Tab-Leiste, Einstellungs-Sheet)
 src/data.js      Küchen-Kategorien (KUECHE), Orte (ITEMS), Events (EVENTS), Gerichte (DISHES), Sprachhilfe, Metrostationen
 src/app.js       Grundlogik: Filter, schematische Karte, Routing (Fuß/Öffis/Auto), Tabs, Standort
 src/features.js  Öffnungszeiten (HOURS), Auslastungsmodell, Tagesvorschlag, gespeicherte Routen, Kopieren/WhatsApp
+src/diary.js     Tagebuch: „erlebt“ abhaken, eigene Sterne (1–5), Notizen, eigene Erlebnisse, Export
 src/init.js      Start der App und Beispielplan
 build.py         baut index.html (GitHub Pages, mit Manifest und Icons) und dist/fragment.html (Artifact)
 ```
 - Kein Framework, alles landet in einer HTML-Datei.
-- Gespeichert wird im `localStorage` (Schlüssel `athen-kompass-v1`): Reisedaten, Plan, Routen, Einstellungen. Der Standort wird nicht gespeichert.
+- Gespeichert wird im `localStorage` (Schlüssel `athen-kompass-v1`): Reisedaten, Plan, Routen, Einstellungen, Tagebuch (`S.log[id] = {done, at, r, note}`, eigene Einträge in `S.custom`). Der Standort wird nicht gespeichert. Bestehende Felder nie umbenennen, sonst gehen gespeicherte Daten verloren.
+- `build.py` fügt die Skripte in dieser Reihenfolge zusammen: data, app, features, diary, init.
 - Ort hinzufügen: Eintrag in `ITEMS` in `src/data.js` (id, Kategorie, Koordinaten, drinnen/draußen, Dauer, Preis). Restaurants und Cafés brauchen zusätzlich `k` (Küchen-Kategorien aus `KUECHE`, z. B. `["fruehstueck","griechisch"]`) und `diet` (veg/vegan/lf). Öffnungszeiten optional in `HOURS` in `src/features.js` eintragen, mit `v:1` für geprüfte und `v:0` für ungefähre Zeiten. Neue Sehenswürdigkeiten bei Bedarf in `PRIO` und `KIND_OVR` (features.js) einordnen.
 - Küchen-Kategorien: Frühstück & Brunch, Griechisch & Taverne, Street Food & Imbiss, Asiatisch, Italienisch & Pizza, Orientalisch, International & Bowls, Süßes & Bäckerei, Kaffee, Fine Dining, dazu der berechnete Filter „100 % vegan“.
 
-## Funktionen (Stand: PR #1–#5)
+## Funktionen (Stand: PR #1–#6)
 - Tab-Leiste unten: Entdecken, Events, Essen, Plan, Praktisch. Dunkles App-Design mit mint-grünem aktivem Tab, Hell-Modus nach Systemeinstellung.
 - Reisezeitraum wählbar und dauerhaft gespeichert. Filter: vegetarisch, vegan, laktosefrei, Regentag (Drinnen-Ziele zuerst, Alternativen).
 - Entdecken: Startseite mit Countdown, Suche, Kategorien, Liste oder Karte. Jede Karte zeigt Preis, Aufenthaltsdauer („vor Ort“), Öffnungszeiten, „jetzt geöffnet“, beste Uhrzeit und beste Tage nach Auslastung.
@@ -44,6 +46,7 @@ build.py         baut index.html (GitHub Pages, mit Manifest und Icons) und dist
 - Plan › Tripliste: „Route berechnen“ oben, Tage einklappbar, optimierte Route, Orte auf dem Weg, Google-Maps-Links.
 - Plan › Tagesvorschlag: Zeitplan aus Startzeit, Dauer, Tempo, Interessen, Pausen (Frühstück, Mittag, Kaffee, Abendessen) und Events, berücksichtigt Sonnenuntergang und Öffnungszeiten.
 - Plan › Routen: als Favoriten speichern, bearbeiten, kopieren, per WhatsApp teilen.
+- Plan › Erlebt (Tagebuch): Jede Karte hat „Als erlebt markieren“, danach eigene Sterne, Datum und Notiz. Der Haken in der Tripliste ist dasselbe „erlebt“. Übersicht mit Statistik, offenen Plan-Zielen, eigenen Erlebnissen, Sortierung nach Tag oder Sternen, Kopieren/WhatsApp. In Entdecken lässt sich Erlebtes ausblenden, der Tagesvorschlag überspringt erlebte Sehenswürdigkeiten.
 - Praktisch: Öffi-Tickets, Preisrichtwerte, Sicherheit, Bräuche, Apps.
 
 ## Datenstand

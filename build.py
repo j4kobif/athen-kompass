@@ -7,7 +7,7 @@ from pathlib import Path
 
 root = Path(__file__).parent
 shell = (root / "src/shell.html").read_text(encoding="utf-8")
-script = "\n".join((root / f"src/{n}.js").read_text(encoding="utf-8") for n in ("data", "app", "features", "init"))
+script = "\n".join((root / f"src/{n}.js").read_text(encoding="utf-8") for n in ("data", "app", "features", "diary", "init"))
 
 fragment = f"{shell}\n<script>\n{script}\n</script>\n"
 (root / "dist").mkdir(exist_ok=True)

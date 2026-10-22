@@ -206,7 +206,7 @@ function genDay(o){const day=o.day||days()[0];const T={entspannt:{buf:20,f:1.15}
   if(o.dinner)pz.push({k:"dinner",at:Math.max(20*60+30,toMin(o.lunchAt)+360),dur:90,cat:"food",n:"Abendessen"});
   const pauses=pz.filter(p=>p.at>=t-30&&p.at+p.dur<=end+30);
   const fixed=o.events?EVENTS.filter(e=>e.t&&hasGeo(e)&&day>=e.s&&day<=e.e&&!(S.rain&&e.in===false)).map(e=>({ev:e,at:toMin(e.t)})).filter(f=>f.at>=t&&f.at<end).sort((a,b)=>a.at-b.at):[];
-  const pool=ITEMS.filter(i=>hasGeo(i)&&i.c!=="trip"&&!(S.rain&&i.in===false)&&!seasonOff(i)&&matchInterest(i,o.interests)&&hav(i,CENTER)<12);
+  const pool=ITEMS.filter(i=>hasGeo(i)&&i.c!=="trip"&&!isDone(i.id)&&!(S.rain&&i.in===false)&&!seasonOff(i)&&matchInterest(i,o.interests)&&hav(i,CENTER)<12);
   const go=(it,extra)=>{const c=legCost(pos,it,o.mode);out.push({type:"travel",min:c.min,how:c.how,km:c.km});return t+c.min+(extra||0);};
   let guard=0;
   while(t<end-15&&guard++<60){
@@ -282,16 +282,16 @@ function renderSuggest(el){const ds=days();const o=S.dt;if(!ds.includes(o.day))o
    ${g.stops.length?`<div class="timeline"><div class="tl-item start"><div class="tl-t">${o.start}</div><div class="tl-b"><b>Start: ${esc(g.startPt.n)}</b></div></div>${timeline}<div class="tl-item start"><div class="tl-t">${hhmm(g.end)}</div><div class="tl-b"><b>Ende</b></div></div></div>
    <div class="mapbox">${mapSVG([g.startPt,...g.stops.map(x=>x.it)].filter(hasGeo).map((p,i)=>Object.assign(Object.create(p),{_no:i+1,id:p.id})),{route:[g.startPt,...g.stops.map(x=>x.it)]})}</div>
    <div class="actions"><button class="btn primary" data-act="dt-save">${ic("bookmark")}Als Route speichern</button><button class="btn" data-act="dt-again">${ic("sparkles")}Anderer Vorschlag</button><button class="btn" data-act="dt-toplan">${ic("route")}In meinen Plan</button>${shareBtns(r,"gen")}</div>
-   <div class="tip">Zeiten sind Schätzungen. Öffnungszeiten mit „ca.“ und Event-Uhrzeiten vorher prüfen.</div>`
+   <div class="tip">Zeiten sind Schätzungen. Öffnungszeiten mit „ca.“ und Event-Uhrzeiten vorher prüfen. Bereits erlebte Sehenswürdigkeiten werden übersprungen.</div>`
    :`<div class="empty">${ic("sparkles")}<span>Mit diesen Einstellungen passt nichts. Wähle mehr Interessen, einen längeren Zeitraum oder schalte den Regentag aus.</span></div>`}`;}
 
 /* ===================== PLAN-TAB ===================== */
 if(!S.planView)S.planView="liste";
 function renderPlan(){const el=$("#p-plan");const ids=Object.keys(S.plan).filter(byId);const pc=$("#planCount");pc.textContent=ids.length;pc.dataset.n=ids.length;
-  const seg=`<div class="ptitle"><h2>Mein Plan</h2></div><div class="seg wide" role="tablist" aria-label="Plan-Ansicht">${[["liste","Tripliste"],["vorschlag","Tagesvorschlag"],["routen",`Routen${S.routes.length?" ("+S.routes.length+")":""}`]].map(([k,l])=>`<button data-act="pv" data-k="${k}" aria-pressed="${S.planView===k}">${l}</button>`).join("")}</div><div id="planBody" class="panel"></div>
+  const seg=`<div class="ptitle"><h2>Mein Plan</h2></div><div class="seg wide" role="tablist" aria-label="Plan-Ansicht">${[["liste","Liste"],["vorschlag","Vorschlag"],["routen",`Routen${S.routes.length?" "+S.routes.length:""}`],["tagebuch",`Erlebt${diaryEntries().length?" "+diaryEntries().length:""}`]].map(([k,l])=>`<button data-act="pv" data-k="${k}" aria-pressed="${S.planView===k}">${l}</button>`).join("")}</div><div id="planBody" class="panel"></div>
    <div id="copyBox" class="copybox" hidden><label for="copyFallback" class="flabel">Text zum Kopieren</label><textarea id="copyFallback" rows="8" readonly></textarea><button class="btn" data-act="closecopy">Schließen</button></div>`;
   el.innerHTML=seg;const body=$("#planBody");
-  if(S.planView==="vorschlag")renderSuggest(body);else if(S.planView==="routen")renderRoutes(body);else renderPlanList(body);}
+  if(S.planView==="vorschlag")renderSuggest(body);else if(S.planView==="routen")renderRoutes(body);else if(S.planView==="tagebuch")renderDiary(body);else renderPlanList(body);}
 
 /* ===================== AKTIONEN ===================== */
 function rById(id){return S.routes.find(r=>r.id===id);}
