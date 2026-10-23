@@ -27,16 +27,18 @@ src/data.js      Küchen-Kategorien (KUECHE), Orte (ITEMS), Events (EVENTS), Ger
 src/app.js       Grundlogik: Filter, schematische Karte, Routing (Fuß/Öffis/Auto), Tabs, Standort
 src/features.js  Öffnungszeiten (HOURS), Auslastungsmodell, Tagesvorschlag, gespeicherte Routen, Kopieren/WhatsApp
 src/diary.js     Tagebuch: „erlebt“ abhaken, eigene Sterne (1–5), Notizen, eigene Erlebnisse, Export
-src/init.js      Start der App und Beispielplan
-build.py         baut index.html (GitHub Pages, mit Manifest und Icons) und dist/fragment.html (Artifact)
+src/init.js      Start der App, Beispielplan, Offline-Hinweis
+src/sw.js        Service Worker (Vorlage) für den Offline-Betrieb
+build.py         baut index.html (GitHub Pages, mit Manifest, Icons und SW-Registrierung), sw.js (mit Versions-Hash) und dist/fragment.html (Artifact, ohne SW)
 ```
 - Kein Framework, alles landet in einer HTML-Datei.
 - Gespeichert wird im `localStorage` (Schlüssel `athen-kompass-v1`): Reisedaten, Plan, Routen, Einstellungen, eigene Zeiten pro Aktivität (`S.durs[id]` in Minuten), eigene Routen-Reihenfolge (`S.manual[tag]`), Tagebuch (`S.log[id] = {done, at, r, note}`, eigene Einträge in `S.custom`). Der Standort wird nicht gespeichert. Bestehende Felder nie umbenennen, sonst gehen gespeicherte Daten verloren.
 - `build.py` fügt die Skripte in dieser Reihenfolge zusammen: data, app, features, diary, init.
+- Offline: `sw.js` cached `index.html`, Manifest und Icons (Liste `CORE` in `src/sw.js`) sowie Google Fonts. Navigation ist „Netz zuerst, sonst Speicher“, damit Updates ankommen. Jeder Build erzeugt einen neuen Versions-Hash, alte Caches werden gelöscht. Neue Dateien, die die App braucht, in `CORE` eintragen. Offline-Verhalten lässt sich lokal mit `python3 -m http.server` auf `localhost` und Playwright testen.
 - Ort hinzufügen: Eintrag in `ITEMS` in `src/data.js` (id, Kategorie, Koordinaten, drinnen/draußen, Dauer, Preis). Restaurants und Cafés brauchen zusätzlich `k` (Küchen-Kategorien aus `KUECHE`, z. B. `["fruehstueck","griechisch"]`) und `diet` (veg/vegan/lf). Öffnungszeiten optional in `HOURS` in `src/features.js` eintragen, mit `v:1` für geprüfte und `v:0` für ungefähre Zeiten. Neue Sehenswürdigkeiten bei Bedarf in `PRIO` und `KIND_OVR` (features.js) einordnen.
 - Küchen-Kategorien: Frühstück & Brunch, Griechisch & Taverne, Street Food & Imbiss, Asiatisch, Italienisch & Pizza, Orientalisch, International & Bowls, Süßes & Bäckerei, Kaffee, Fine Dining, dazu der berechnete Filter „100 % vegan“.
 
-## Funktionen (Stand: PR #1–#8)
+## Funktionen (Stand: PR #1–#9)
 - Tab-Leiste unten: Entdecken, Events, Essen, Plan, Praktisch. Dunkles App-Design mit mint-grünem aktivem Tab, Hell-Modus nach Systemeinstellung.
 - Reisezeitraum wählbar und dauerhaft gespeichert. Filter: vegetarisch, vegan, laktosefrei, Regentag (Drinnen-Ziele zuerst, Alternativen).
 - Entdecken: Startseite mit Countdown, Suche, Kategorien, Liste oder Karte. Jede Karte zeigt Preis, Aufenthaltsdauer („vor Ort“), Öffnungszeiten, „jetzt geöffnet“, beste Uhrzeit und beste Tage nach Auslastung.
@@ -48,7 +50,8 @@ build.py         baut index.html (GitHub Pages, mit Manifest und Icons) und dist
 - Plan › Tagesvorschlag: Zeitplan aus Startzeit, Dauer, Tempo, Interessen, Pausen (Frühstück, Mittag, Kaffee, Abendessen) und Events, berücksichtigt Sonnenuntergang und Öffnungszeiten. Ende offen, als Rundweg oder an einem Wunschort; der Rückweg wird bei der Zeitplanung eingerechnet.
 - Plan › Routen: als Favoriten speichern, bearbeiten (inkl. Routenende), kopieren, per WhatsApp teilen. Gespeicherte Routen haben optional `end` (`{loop:true}` oder `{n,lat,lon,ref}`).
 - Plan › Erlebt (Tagebuch): Jede Karte hat „Als erlebt markieren“, danach eigene Sterne, Datum und Notiz. Der Haken in der Tripliste ist dasselbe „erlebt“. Übersicht mit Statistik, offenen Plan-Zielen, eigenen Erlebnissen, Sortierung nach Tag oder Sternen, Kopieren/WhatsApp. In Entdecken lässt sich Erlebtes ausblenden, der Tagesvorschlag überspringt erlebte Sehenswürdigkeiten.
-- Praktisch: Öffi-Tickets, Preisrichtwerte, Sicherheit, Bräuche, Apps.
+- Praktisch: Öffi-Tickets, Preisrichtwerte, Sicherheit, Bräuche, Apps, Anleitung „Offline & Flugmodus“.
+- Offline/Flugmodus: Nach dem ersten Öffnen mit Internet läuft die App komplett offline (auch als Home-Bildschirm-App). Ohne Netz erscheint oben ein Hinweis; externe Links (Google Maps, Websites, WhatsApp) brauchen Internet.
 
 ## Datenstand
 Preise, Öffnungszeiten und Events recherchiert im Oktober 2026. Rund 125 Orte, davon 30 Restaurants und 23 Cafés. Öffnungszeiten von Cafés und Bäckereien stammen meist aus Guides und sind als „ca.“ markiert.

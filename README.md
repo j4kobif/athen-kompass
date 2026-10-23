@@ -24,10 +24,12 @@ Preise: Ein fester Preis ist recherchiert (Stand Oktober 2026), ein Preis mit �
 
 Plan, Routen und Tagebuch werden im `localStorage` des Browsers gespeichert, also nur auf dem jeweiligen Gerät.
 
-## Als App aufs Handy
+## Als App aufs Handy (auch offline)
 
 iPhone: Seite in Safari öffnen → Teilen → „Zum Home-Bildschirm“.
 Android: Chrome → Menü → „App installieren“.
+
+Danach die App einmal mit Internet öffnen. Ab dann funktioniert sie auch im Flugmodus: Plan, Routen, Tagebuch, Öffnungszeiten, Preise und Karte sind auf dem Handy gespeichert. Nur Links nach außen (Google Maps, Websites, WhatsApp) brauchen Internet.
 
 ## Aufbau
 
@@ -38,7 +40,8 @@ src/app.js       Grundlogik: Filter, Karte, Routing, Rendering
 src/features.js  Öffnungszeiten, Auslastung, Tagesvorschlag, gespeicherte Routen, Teilen
 src/diary.js     Tagebuch: erlebt, Bewertungen, Notizen
 src/init.js      Start der App
-build.py         baut index.html (GitHub Pages) und dist/fragment.html
+src/sw.js        Service Worker für den Offline-Betrieb
+build.py         baut index.html und sw.js (GitHub Pages) sowie dist/fragment.html
 ```
 
 Nach Änderungen in `src/` einmal `python3 build.py` ausführen.

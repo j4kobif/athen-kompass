@@ -411,6 +411,13 @@ function renderInfo(){const el=$("#p-praktisch");const fd=freeDays();
    <li>Leitungswasser ist im Zentrum trinkbar und wird in Tavernen oft gratis hingestellt.</li>
    <li>Ein paar Worte Griechisch öffnen Türen: Kaliméra, Efcharistó.</li>
    <li>Von ca. 15 bis 17:30 Uhr ist in Wohnvierteln Mittagsruhe.</li></ul>`)}
+  ${acc("plane","Offline & Flugmodus",`<p style="margin:0">Die App funktioniert ohne Internet, wenn du sie einmal online geöffnet hast. Dein Plan, Routen, Tagebuch, Öffnungszeiten, Preise und die Karte sind dann auf dem Handy gespeichert.</p>
+   <ul><li><b>iPhone:</b> Seite in Safari öffnen → Teilen → „Zum Home-Bildschirm“. Danach die App <b>einmal vom Home-Bildschirm mit Internet</b> öffnen. Ab dann geht sie im Flugmodus.</li>
+   <li><b>Android:</b> In Chrome öffnen → Menü → „App installieren“ und einmal mit Internet öffnen.</li>
+   <li>Ohne Internet gehen nicht: Google-Maps-Links, Websites, „Preis prüfen“-Links und das Teilen per WhatsApp. Kopieren geht trotzdem.</li>
+   <li>Dein Standort funktioniert meist auch offline über GPS.</li>
+   <li>Updates der App kommen automatisch, sobald du sie wieder mit Internet öffnest.</li></ul>
+   <div class="tip">Wichtig: Die Home-Bildschirm-App speichert getrennt von Safari. Trage Reisedaten und Plan direkt in der Home-Bildschirm-App ein.</div>`)}
   ${acc("phone","Sinnvolle Apps",`<div class="tbl"><table><tbody>
    <tr><td><b>Google Maps</b></td><td>Fußwege, Metro- und Busrouten in Echtzeit</td></tr>
    <tr><td><b>OASA Telematics</b></td><td>Offizielle Echtzeit-Ankunft von Bus und Trolley</td></tr>

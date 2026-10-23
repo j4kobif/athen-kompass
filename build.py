@@ -4,6 +4,7 @@
 - dist/fragment.html    gleiche App ohne <html>/<head>-Gerüst (für Claude-Artifacts)
 """
 from pathlib import Path
+import hashlib
 
 root = Path(__file__).parent
 shell = (root / "src/shell.html").read_text(encoding="utf-8")
@@ -36,5 +37,23 @@ head_extra = """
 style_end = rest.index("</style>") + len("</style>")
 head_part, body_part = rest[:style_end], rest[style_end:]
 index = f"<!doctype html>\n<html lang=\"de\">\n<head>{head_extra}{title}{head_part}\n</head>\n<body>{body_part}</body>\n</html>\n"
+# Service Worker nur für die GitHub-Pages-Version (im Artifact nicht möglich)
+SW_REGISTER = """<script>
+if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost")){window.addEventListener("load",function(){
+  var first=!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register("sw.js").then(function(){return navigator.serviceWorker.ready;}).then(function(reg){
+    var urls=performance.getEntriesByType("resource").map(function(e){return e.name;}).filter(function(u){return /fonts\\.(googleapis|gstatic)\\.com/.test(u);});
+    if(reg.active)reg.active.postMessage({type:"cache-urls",urls:urls});
+    if(first){try{if(!localStorage.getItem("ak-offline-ok")){localStorage.setItem("ak-offline-ok","1");toast("Offline gespeichert – die App funktioniert jetzt auch im Flugmodus");}}catch(e){}}
+  }).catch(function(){});
+});}
+</script>
+"""
+index = index.replace("</body>", SW_REGISTER + "</body>")
 (root / "index.html").write_text(index, encoding="utf-8")
-print("index.html", len(index), "| dist/fragment.html", len(fragment))
+
+assets = index.encode() + b"".join((root / f).read_bytes() for f in ("manifest.webmanifest", "icon.svg", "icon-180.png", "icon-192.png", "icon-512.png"))
+version = hashlib.sha256(assets).hexdigest()[:12]
+sw = (root / "src/sw.js").read_text(encoding="utf-8").replace("__VERSION__", version)
+(root / "sw.js").write_text(sw, encoding="utf-8")
+print("index.html", len(index), "| dist/fragment.html", len(fragment), "| sw.js", version)
